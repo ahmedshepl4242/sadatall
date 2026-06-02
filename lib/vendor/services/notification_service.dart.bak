@@ -1,0 +1,489 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'order_service.dart';
+
+// Global key for accessing navigator state
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final OrderService _orderService = OrderService();
+
+  bool _isInitialized = false;
+  String? _fcmToken;
+
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      // Request notification permissions
+      await _requestPermissions();
+
+      // Initialize Firebase messaging
+      await _initializeFirebaseMessaging();
+
+      // Get and save FCM token
+      await _getFCMToken();
+
+      _isInitialized = true;
+
+      if (kDebugMode) {
+        print('NotificationService initialized successfully');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('NotificationService initialization error: $e');
+      }
+    }
+  }
+
+  // Check for any stored background notifications and display them
+  Future<void> checkStoredNotifications() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final notifications = prefs.getStringList('background_notifications') ?? [];
+      
+      if (notifications.isNotEmpty && navigatorKey.currentContext != null) {
+        // Display all stored notifications
+        for (final notificationStr in notifications) {
+          try {
+            final notificationData = jsonDecode(notificationStr);
+            final title = notificationData['title'] as String?;
+            final body = notificationData['body'] as String?;
+            final data = notificationData['data'] as Map<String, dynamic>?;
+            
+            if (title != null || body != null) {
+              // Show notification dialog
+              await showDialog(
+                context: navigatorKey.currentContext!,
+                barrierDismissible: true,
+                builder: (BuildContext context) {
+                  return AlertDialog(
+                    title: Text(title ?? 'تنبيه جديد'),
+                    content: Text(body ?? ''),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        child: const Text('إغلاق'),
+                      ),
+                      if (data != null && data['orderId'] != null)
+                        TextButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            _handleNotificationNavigation(data);
+                          },
+                          child: const Text('عرض الطلب'),
+                        ),
+                    ],
+                  );
+                },
+              );
+            }
+          } catch (e) {
+            if (kDebugMode) {
+              print('Error processing stored notification: $e');
+            }
+          }
+        }
+        
+        // Clear stored notifications after displaying them
+        await prefs.remove('background_notifications');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error checking stored notifications: $e');
+      }
+    }
+  }
+
+  Future<void> _requestPermissions() async {
+    final settings = await _messaging.requestPermission(
+      alert: true,
+      announcement: false,
+      badge: true,
+      carPlay: false,
+      criticalAlert: false,
+      provisional: false,
+      sound: true,
+    );
+
+    if (kDebugMode) {
+      print('Notification permission status: ${settings.authorizationStatus}');
+    }
+  }
+
+  Future<void> _initializeFirebaseMessaging() async {
+    // Handle background messages
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // Handle foreground messages
+    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+
+    // Handle notification taps when app is in background/terminated
+    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
+
+    // Handle initial message if app was opened from notification
+    final initialMessage = await _messaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleNotificationTap(initialMessage);
+    }
+
+    // Configure message handling when app is in background
+    await _messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+  }
+
+  Future<void> _getFCMToken() async {
+    try {
+      _fcmToken = await _messaging.getToken();
+
+      if (kDebugMode) {
+        print('FCM Token: $_fcmToken');
+      }
+
+      // Send token to backend with validation
+      if (_fcmToken != null && _fcmToken!.isNotEmpty) {
+        final response = await _orderService.updateFCMToken(_fcmToken!);
+        if (!response.success && kDebugMode) {
+          print('Failed to update FCM token on server: ${response.error}');
+        }
+      }
+
+      // Listen for token refresh
+      _messaging.onTokenRefresh.listen((newToken) async {
+        _fcmToken = newToken;
+        if (kDebugMode) {
+          print('FCM Token refreshed: $newToken');
+        }
+        if (newToken.isNotEmpty) {
+          final response = await _orderService.updateFCMToken(newToken);
+          if (!response.success && kDebugMode) {
+            print('Failed to update refreshed FCM token: ${response.error}');
+          }
+        }
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error getting FCM token: $e');
+      }
+    }
+  }
+
+  void _handleForegroundMessage(RemoteMessage message) {
+    if (kDebugMode) {
+      print('Received foreground message:');
+      print('Title: ${message.notification?.title}');
+      print('Body: ${message.notification?.body}');
+      print('Data: ${message.data}');
+    }
+
+    // Show notification in a dialog or snackbar when app is in foreground
+    if (navigatorKey.currentContext != null) {
+      // Show in Snackbar first
+      ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+        SnackBar(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (message.notification?.title != null)
+                Text(
+                  message.notification!.title!,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              if (message.notification?.body != null)
+                Text(message.notification!.body!),
+            ],
+          ),
+          action: message.data['orderId'] != null
+              ? SnackBarAction(
+                  label: 'عرض',
+                  onPressed: () => _handleNotificationNavigation(message.data),
+                )
+              : null,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      
+      // Also show as dialog for better visibility
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _showNotificationDialog(message);
+      });
+    }
+  }
+
+  void _handleNotificationTap(RemoteMessage message) {
+    if (kDebugMode) {
+      print('Notification tapped:');
+      print('Title: ${message.notification?.title}');
+      print('Body: ${message.notification?.body}');
+      print('Data: ${message.data}');
+    }
+
+    _handleNotificationNavigation(message.data);
+  }
+
+  void _handleNotificationNavigation(Map<String, dynamic> data) {
+    final type = data['type'];
+    final orderId = data['orderId'];
+
+    if (kDebugMode) {
+      print('Navigating to notification type: $type, orderId: $orderId');
+    }
+
+    switch (type) {
+      case 'new_order':
+      case 'order_update':
+        if (orderId != null) {
+          // Navigate to order details using the global navigator key
+          if (navigatorKey.currentContext != null) {
+            try {
+              // Navigate to main screen first, then navigate to order details
+              navigatorKey.currentState?.pushNamedAndRemoveUntil('/main', (route) => route.isFirst);
+              
+              // Show a snackbar indicating we're loading the order
+              if (navigatorKey.currentContext != null) {
+                ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+                  const SnackBar(
+                    content: Text('جاري تحميل تفاصيل الطلب...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+              
+              // We'll need to fetch the order and then navigate to its details
+              // For now, we'll show a message to the user to check the orders section
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (navigatorKey.currentContext != null) {
+                  ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+                    SnackBar(
+                      content: const Text('طلب جديد تم استلامه - يرجى التحقق من قسم الطلبات'),
+                      action: SnackBarAction(
+                        label: 'عرض',
+                        onPressed: () {
+                          // Navigate to orders screen
+                          navigatorKey.currentState?.pushNamed('/main');
+                        },
+                      ),
+                      duration: const Duration(seconds: 5),
+                    ),
+                  );
+                }
+              });
+            } catch (e) {
+              if (kDebugMode) {
+                print('Error navigating to order details: $e');
+              }
+              
+              // Fallback: show dialog
+              if (navigatorKey.currentContext != null) {
+                showDialog(
+                  context: navigatorKey.currentContext!,
+                  barrierDismissible: true,
+                  builder: (BuildContext context) {
+                    return AlertDialog(
+                      title: const Text('طلب جديد'),
+                      content: const Text('لقد استلمت طلباً جديداً - يرجى التحقق من قسم الطلبات في التطبيق'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(context).pop(),
+                          child: const Text('موافق'),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              }
+            }
+          }
+        }
+        break;
+      default:
+        if (kDebugMode) {
+          print('Unknown notification type: $type');
+        }
+        // Show a generic dialog for unknown notification types
+        if (navigatorKey.currentContext != null) {
+          showDialog(
+            context: navigatorKey.currentContext!,
+            barrierDismissible: true,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('تنبيه جديد'),
+                content: const Text('لديك تنبيه جديد من النظام'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('موافق'),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+    }
+  }
+
+  // Show notification in a dialog for better visibility
+  Future<void> _showNotificationDialog(RemoteMessage message) async {
+    if (navigatorKey.currentContext == null) return;
+    
+    final title = message.notification?.title ?? 'تنبيه جديد';
+    final body = message.notification?.body ?? 'لديك تنبيه جديد';
+    final orderId = message.data['orderId'];
+    
+    // Don't show duplicate dialogs quickly
+    await showDialog(
+      context: navigatorKey.currentContext!,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(title),
+          content: Text(body),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('إغلاق'),
+            ),
+            if (orderId != null)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _handleNotificationNavigation(message.data);
+                },
+                child: const Text('عرض الطلب'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+              print('Navigate to order: $orderId');
+            }
+          }
+        }
+        break;
+      case 'customer_message':
+        if (kDebugMode) {
+          print('Navigate to customer message');
+        }
+        break;
+      default:
+        if (kDebugMode) {
+          print('Unknown notification type: $type');
+        }
+    }
+  }
+
+  // Public methods
+  Future<void> showGeneralNotification({
+    required String title,
+    required String body,
+    String? actionData,
+  }) async {
+    // Create the notification message
+    final message = RemoteMessage(
+      notification: RemoteNotification(
+        title: title,
+        body: body,
+      ),
+      data: actionData != null ? {'actionData': actionData} : {},
+    );
+
+    // Handle it as a foreground message
+    _handleForegroundMessage(message);
+  }
+
+  Future<void> clearAllNotifications() async {
+    // For Firebase Cloud Messaging, notifications are automatically cleared when tapped
+    // This is a placeholder method to maintain API compatibility
+    // If you need more control, you would need to implement platform-specific code
+    if (kDebugMode) {
+      print('Clearing notifications - Note: FCM handles this automatically');
+    }
+  }
+
+  // Utility methods
+  String? get fcmToken => _fcmToken;
+  bool get isInitialized => _isInitialized;
+
+  Future<void> subscribeToTopic(String topic) async {
+    try {
+      await _messaging.subscribeToTopic(topic);
+      if (kDebugMode) {
+        print('Subscribed to topic: $topic');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error subscribing to topic $topic: $e');
+      }
+    }
+  }
+
+  Future<void> unsubscribeFromTopic(String topic) async {
+    try {
+      await _messaging.unsubscribeFromTopic(topic);
+      if (kDebugMode) {
+        print('Unsubscribed from topic: $topic');
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error unsubscribing from topic $topic: $e');
+      }
+    }
+  }
+}
+
+// Background message handler - must be top-level function
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Initialize Firebase if needed
+  // Note: Only initialize if not already initialized
+  try {
+    if (kDebugMode) {
+      print('Handling background message:');
+      print('Title: ${message.notification?.title}');
+      print('Body: ${message.notification?.body}');
+      print('Data: ${message.data}');
+    }
+    
+    // Store notification data for when app is opened
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final notifications = prefs.getStringList('background_notifications') ?? [];
+      final notificationData = jsonEncode({
+        'title': message.notification?.title,
+        'body': message.notification?.body,
+        'data': message.data,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+      notifications.add(notificationData);
+      
+      // Keep only last 10 notifications to prevent storage bloat
+      if (notifications.length > 10) {
+        notifications.removeRange(0, notifications.length - 10);
+      }
+      
+      await prefs.setStringList('background_notifications', notifications);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Error storing background notification: $e');
+      }
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('Error in background handler: $e');
+    }
+  }
+}

@@ -1,0 +1,135 @@
+workflows:
+  ios-release-build:
+    name: iOS Release Build
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+
+    scripts:
+      - name: Get Flutter dependencies
+        script: flutter pub get
+
+      - name: Flutter config-only (generates xcconfig & plugin files, skips pod install)
+        script: |
+          flutter build ios --config-only --no-codesign 2>/dev/null || true
+
+      - name: Clean and reinstall pods
+        script: |
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+
+      - name: Verify -GCC_WARN_INHIBIT_ALL_WARNINGS was removed by Podfile hook
+        script: |
+          TARGET_DIR="ios/Pods/Target Support Files/BoringSSL-GRPC"
+          echo "=== BoringSSL-GRPC xcconfig files ==="
+          ls "$TARGET_DIR" 2>/dev/null || echo "Directory not found: $TARGET_DIR"
+          echo "=== Checking for -GCC_WARN_INHIBIT_ALL_WARNINGS ==="
+          for f in "$TARGET_DIR"/*.xcconfig; do
+            [ -f "$f" ] || continue
+            if grep -q -- "-GCC_WARN_INHIBIT_ALL_WARNINGS" "$f"; then
+              echo "Still present in: $f — patching now"
+              sed -i '' 's/-GCC_WARN_INHIBIT_ALL_WARNINGS//g' "$f"
+              echo "After patch:"; grep "OTHER_CFLAGS" "$f" || true
+            else
+              echo "Clean: $f"
+            fi
+          done
+          echo "=== Patching project.pbxproj directly ==="
+          if [ -f ios/Pods/Pods.xcodeproj/project.pbxproj ]; then
+            sed -i '' 's/-GCC_WARN_INHIBIT_ALL_WARNINGS//g' ios/Pods/Pods.xcodeproj/project.pbxproj
+            echo "Patched Pods.xcodeproj"
+          fi
+          echo "=== Done ==="
+
+      - name: Build iOS Release (xcodebuild direct, fresh DerivedData)
+        script: |
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath /tmp/derived_data \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            2>&1 | tee /tmp/xbuild.log
+          STATUS=${PIPESTATUS[0]}
+          if [ $STATUS -ne 0 ]; then
+            echo "=== error lines ==="
+            grep -n "error:" /tmp/xbuild.log | head -20
+          fi
+          exit $STATUS
+
+    artifacts:
+      - build/ios/iphoneos/Runner.app
+      - /tmp/xbuild.log
+
+  # ---------------------------------------------------------------------------
+  ios-release-workflow:
+    name: iOS Release Build
+    max_build_duration: 60
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+      # Add these in Codemagic UI → Environment variables:
+      # APP_STORE_CONNECT_ISSUER_ID, APP_STORE_CONNECT_KEY_IDENTIFIER,
+      # APP_STORE_CONNECT_PRIVATE_KEY, CERTIFICATE_PRIVATE_KEY
+
+    scripts:
+      - name: Get Flutter dependencies
+        script: flutter pub get
+
+      - name: Flutter config-only (generates xcconfig & plugin files, skips pod install)
+        script: |
+          flutter build ios --config-only --no-codesign 2>/dev/null || true
+
+      - name: Clean and reinstall pods
+        script: |
+          cd ios
+          rm -rf Pods Podfile.lock
+          pod install --repo-update
+
+      - name: Strip unsupported -G flag from all pod xcconfig files
+        script: |
+          find ios/Pods -name "*.xcconfig" | while read f; do
+            if grep -q -- " -G" "$f" || grep -q -- "^-G" "$f"; then
+              echo "Patching: $f"
+              sed -i '' 's/ -G / /g; s/ -G$//; s/^-G //' "$f"
+            fi
+            if grep -q -- "-GCC_WARN_INHIBIT_ALL_WARNINGS" "$f"; then
+              sed -i '' 's/-GCC_WARN_INHIBIT_ALL_WARNINGS//g' "$f"
+            fi
+          done
+          if [ -f ios/Pods/Pods.xcodeproj/project.pbxproj ]; then
+            sed -i '' 's/-GCC_WARN_INHIBIT_ALL_WARNINGS//g' ios/Pods/Pods.xcodeproj/project.pbxproj
+            echo "Patched Pods.xcodeproj"
+          fi
+          echo "=== Strip complete ==="
+
+      - name: Build iOS Release IPA (xcodebuild direct)
+        script: |
+          xcodebuild \
+            -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            CODE_SIGNING_ALLOWED=NO \
+            COMPILER_INDEX_STORE_ENABLE=NO \
+            -archivePath /tmp/Runner.xcarchive \
+            archive \
+            2>&1 | tee /tmp/xbuild_release.log
+          STATUS=${PIPESTATUS[0]}
+          if [ $STATUS -ne 0 ]; then
+            echo "=== lines with -G ==="
+            grep -n -- "-G" /tmp/xbuild_release.log | head -20
+            echo "=== error lines ==="
+            grep -n "error:" /tmp/xbuild_release.log | head -20
+          fi
+          exit $STATUS
+
+    artifacts:
+      - /tmp/Runner.xcarchive
+      - /tmp/xbuild_release.log

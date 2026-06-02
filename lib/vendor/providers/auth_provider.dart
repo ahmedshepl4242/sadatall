@@ -1,0 +1,185 @@
+
+import 'package:flutter/foundation.dart';
+import '../models/vendor.dart';
+import '../services/auth_service.dart';
+import '../services/notification_service.dart';
+import '../services/order_service.dart';
+
+class AuthProvider with ChangeNotifier {
+  final AuthService _authService = AuthService();
+  final OrderService _orderService = OrderService();
+  
+  Vendor? _currentVendor;
+  bool _isAuthenticated = false;
+  bool _isLoading = false;
+  bool _isVendorLocked = false;
+  
+  Vendor? get currentVendor => _currentVendor;
+  bool get isAuthenticated => _isAuthenticated;
+  bool get isLoading => _isLoading;
+  bool get isVendorLocked => _isVendorLocked;
+
+  Future<void> checkAuthStatus() async {
+    _setLoading(true);
+    
+    try {
+      final isLoggedIn = await _authService.isLoggedIn();
+      if (isLoggedIn) {
+        final vendor = await _authService.getCurrentVendor();
+        if (vendor != null) {
+          _currentVendor = vendor;
+          // Check if the vendor is locked based on the isLocked field
+          _isVendorLocked = vendor.isLocked == true;
+          _isAuthenticated = true;
+        } else {
+          _isAuthenticated = false;
+        }
+      } else {
+        _isAuthenticated = false;
+      }
+    } catch (e) {
+      _isAuthenticated = false;
+    }
+    
+    _setLoading(false);
+  }
+
+  Future<bool> login(String contactNumber, String password) async {
+    _setLoading(true);
+    
+    try {
+      final result = await _authService.login(
+        contactNumber: contactNumber,
+        password: password,
+      );
+
+      if (result.success && result.vendor != null) {
+        _currentVendor = result.vendor;
+        _isAuthenticated = true;
+        _setLoading(false);
+        
+        // Send FCM token to backend after successful login
+        await Future.delayed(const Duration(milliseconds: 500)); // Small delay to ensure everything is initialized
+        final notificationService = NotificationService();
+        if (notificationService.fcmToken != null && notificationService.fcmToken!.isNotEmpty) {
+          final response = await _orderService.updateFCMToken(notificationService.fcmToken!);
+          if (kDebugMode) {
+            print(response.success 
+                ? 'FCM token sent successfully after login' 
+                : 'Failed to send FCM token: ${response.error}');
+          }
+        } else {
+          if (kDebugMode) {
+            print('FCM token not available yet, will send when ready');
+          }
+          // Set up a small delay and try again
+          await Future.delayed(const Duration(seconds: 1));
+          if (notificationService.fcmToken != null && notificationService.fcmToken!.isNotEmpty) {
+            final response = await _orderService.updateFCMToken(notificationService.fcmToken!);
+            if (kDebugMode) {
+              print(response.success 
+                  ? 'FCM token sent successfully after delay' 
+                  : 'Failed to send FCM token after delay: ${response.error}');
+            }
+          }
+        }
+        
+        return true;
+      } else {
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _setLoading(false);
+      // Show user-friendly error message instead of just returning false
+      if (kDebugMode) {
+        print('خطأ غير متوقع: ${e.toString()}');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> logout() async {
+    _setLoading(true);
+    
+    try {
+      await _authService.logout();
+      _currentVendor = null;
+      _isAuthenticated = false;
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setLoading(false);
+      // Show user-friendly error message instead of just returning false
+      if (kDebugMode) {
+        print('خطأ غير متوقع أثناء تسجيل الخروج: ${e.toString()}');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> signup({
+    required String vendorName,
+    required String contactNumber,
+    required String password,
+    required String address,
+    required String description,
+    required double latitude,
+    required double longitude,
+    required int neighborhoodId,
+    required List<int> categories,
+  }) async {
+    _setLoading(true);
+
+    try {
+      final result = await _authService.signup(
+        vendorName: vendorName,
+        contactNumber: contactNumber,
+        password: password,
+        address: address,
+        description: description,
+        latitude: latitude,
+        longitude: longitude,
+        neighborhoodId: neighborhoodId,
+        categories: categories,
+      );
+
+      if (result.success && result.vendor != null) {
+        _currentVendor = result.vendor;
+        _isAuthenticated = true;
+        _setLoading(false);
+        
+        return true;
+      } else {
+        _setLoading(false);
+        return false;
+      }
+    } catch (e) {
+      _setLoading(false);
+      // Show user-friendly error message instead of just returning false
+      if (kDebugMode) {
+        print('خطأ غير متوقع: ${e.toString()}');
+      }
+      return false;
+    }
+  }
+
+  void updateVendor(Vendor vendor) {
+    _currentVendor = vendor;
+    // Check if the vendor is locked based on the isLocked field
+    _isVendorLocked = vendor.isLocked == true;
+    notifyListeners();
+  }
+  
+  Vendor? get vendor => _currentVendor;
+
+  void _setLoading(bool loading) {
+    _isLoading = loading;
+    notifyListeners();
+  }
+
+  void setVendorLockStatus(bool isLocked) {
+    _isVendorLocked = isLocked;
+    notifyListeners();
+  }
+}

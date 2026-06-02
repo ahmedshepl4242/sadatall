@@ -1,0 +1,117 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import '../../../../core/network/api_client.dart';
+import '../../../../core/config/api_config.dart';
+import '../../../../core/services/storage_service.dart';
+import '../../../../core/utils/app_utils.dart';
+import '../models/captain_model.dart';
+
+class AuthService {
+  final ApiClient _apiClient = ApiClient();
+  final StorageService _storageService = StorageService();
+
+  Future<Map<String, dynamic>> signup({
+    required String userName,
+    required String email,
+    required String phoneNumber,
+    required String password,
+    required String nationalId,
+    File? photo,
+  }) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}${ApiConfig.authSignup}');
+    final request = http.MultipartRequest('POST', uri);
+
+    // Add headers
+    request.headers.addAll(ApiConfig.headers);
+
+    // Add text fields
+    request.fields['userName'] = userName;
+    request.fields['email'] = email;
+    request.fields['phoneNumber'] = phoneNumber;
+    request.fields['password'] = password;
+    request.fields['nationalId'] = nationalId;
+
+    // Add photo file if provided
+    if (photo != null) {
+      request.files.add(await http.MultipartFile.fromPath(
+        'photo',
+        photo.path,
+      ));
+    }
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      final body = jsonDecode(response.body);
+
+      if (response.statusCode >= 200 && response.statusCode < 300 && body['success'] == true) {
+        final data = body['data'];
+        final result = {
+          'captain': CaptainModel.fromJson(data['captain']),
+          'token': data['token'],
+          'refreshToken': data['refreshToken'],
+        };
+
+        // Store tokens securely
+        await _storageService.setSecureString(StorageService.keyAuthToken, result['token']);
+        await _storageService.setSecureString(StorageService.keyRefreshToken, result['refreshToken']);
+
+        // Set tokens in ApiClient
+        _apiClient.setAuthToken(result['token']);
+        _apiClient.setRefreshToken(result['refreshToken']);
+
+        return result;
+      } else {
+        throw Exception(body['error'] ?? 'Registration failed');
+      }
+    } catch (e) {
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception(AppUtils.getLocalizedErrorMessage(e));
+    }
+  }
+
+  Future<Map<String, dynamic>> login({
+    required String email,
+    required String password,
+  }) async {
+    final response = await _apiClient.post(
+      ApiConfig.authLogin,
+      body: {
+        'email': email,
+        'password': password,
+      },
+      fromJson: (data) => {
+        'captain': CaptainModel.fromJson(data['captain']),
+        'token': data['token'],
+        'refreshToken': data['refreshToken'],
+      },
+    );
+
+    if (response.success && response.data != null) {
+      final data = response.data!;
+      // Store tokens securely
+      await _storageService.setSecureString(StorageService.keyAuthToken, data['token']);
+      await _storageService.setSecureString(StorageService.keyRefreshToken, data['refreshToken']);
+      
+      // Set tokens in ApiClient
+      _apiClient.setAuthToken(data['token']);
+      _apiClient.setRefreshToken(data['refreshToken']);
+      
+      return data;
+    } else {
+      throw Exception(response.error ?? 'Login failed');
+    }
+  }
+
+  Future<void> logout() async {
+    // Clear tokens from secure storage
+    await _storageService.deleteSecureString(StorageService.keyAuthToken);
+    await _storageService.deleteSecureString(StorageService.keyRefreshToken);
+    
+    // Clear tokens from ApiClient
+    _apiClient.clearAuthToken();
+  }
+}
