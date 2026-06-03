@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 // App mode
 import 'app_mode.dart';
+import 'firebase_options.dart';
 
 // Mode selector
 import 'mode_selector/mode_selector_screen.dart';
@@ -83,7 +84,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   }
 
   final prefs = await SharedPreferences.getInstance();
@@ -102,7 +105,9 @@ Future<void> main() async {
 @pragma('vm:entry-point')
 Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
   if (Firebase.apps.isEmpty) {
-    await Firebase.initializeApp();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
   }
 }
 
