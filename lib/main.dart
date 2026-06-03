@@ -214,23 +214,20 @@ class _RootAppState extends State<RootApp> {
 class _CaptainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return UncontrolledProviderScope(
-      container: _captainContainer,
-      child: MaterialApp(
-        title: 'تعالالي _T3alaly',
-        theme: captain_theme.AppTheme.light,
-        home: const _CaptainAuthWrapper(),
-        debugShowCheckedModeBanner: false,
-        locale: const Locale('ar', 'EG'),
-        supportedLocales: const [Locale('ar', 'EG'), Locale('en', 'US')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        builder: (context, child) =>
-            Directionality(textDirection: TextDirection.rtl, child: child!),
-      ),
+    return MaterialApp(
+      title: 'تعالالي _T3alaly',
+      theme: captain_theme.AppTheme.light,
+      home: const _CaptainAuthWrapper(),
+      debugShowCheckedModeBanner: false,
+      locale: const Locale('ar', 'EG'),
+      supportedLocales: const [Locale('ar', 'EG'), Locale('en', 'US')],
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      builder: (context, child) =>
+          Directionality(textDirection: TextDirection.rtl, child: child!),
     );
   }
 }
