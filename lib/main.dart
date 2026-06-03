@@ -114,6 +114,15 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
 // ─────────────────────────────────────────────────────────────────────────────
 // ROOT ROUTER
 // ─────────────────────────────────────────────────────────────────────────────
+
+// Create provider instances once — never recreated on rebuild.
+final _vendorAuthProvider = vendor_auth.AuthProvider();
+final _userAuthProvider = user_auth.AuthProvider();
+final _timeProvider = TimeProvider();
+
+// Dedicated Riverpod container for captain — survives mode switches.
+final _captainContainer = ProviderContainer();
+
 class RootApp extends StatefulWidget {
   final String? initialMode;
   const RootApp({required this.initialMode});
@@ -205,20 +214,23 @@ class _RootAppState extends State<RootApp> {
 class _CaptainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'تعالالي _T3alaly',
-      theme: captain_theme.AppTheme.light,
-      home: const _CaptainAuthWrapper(),
-      debugShowCheckedModeBanner: false,
-      locale: const Locale('ar', 'EG'),
-      supportedLocales: const [Locale('ar', 'EG'), Locale('en', 'US')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      builder: (context, child) =>
-          Directionality(textDirection: TextDirection.rtl, child: child!),
+    return UncontrolledProviderScope(
+      container: _captainContainer,
+      child: MaterialApp(
+        title: 'تعالالي _T3alaly',
+        theme: captain_theme.AppTheme.light,
+        home: const _CaptainAuthWrapper(),
+        debugShowCheckedModeBanner: false,
+        locale: const Locale('ar', 'EG'),
+        supportedLocales: const [Locale('ar', 'EG'), Locale('en', 'US')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        builder: (context, child) =>
+            Directionality(textDirection: TextDirection.rtl, child: child!),
+      ),
     );
   }
 }
@@ -284,7 +296,7 @@ class _VendorApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => vendor_auth.AuthProvider()),
+        ChangeNotifierProvider.value(value: _vendorAuthProvider),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
@@ -315,8 +327,8 @@ class _UserApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => user_auth.AuthProvider()),
-        ChangeNotifierProvider(create: (_) => TimeProvider()),
+        ChangeNotifierProvider.value(value: _userAuthProvider),
+        ChangeNotifierProvider.value(value: _timeProvider),
       ],
       child: MaterialApp(
         navigatorKey: navigatorKey,
