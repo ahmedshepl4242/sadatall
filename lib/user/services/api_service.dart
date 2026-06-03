@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../core/config/api_config.dart';
 import 'storage_service.dart';
-import '../main.dart'; // For navigator key
+import 'package:sadat_delivery_merged/main.dart' show navigatorKey;
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
