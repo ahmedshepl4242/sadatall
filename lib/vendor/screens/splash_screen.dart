@@ -57,22 +57,25 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initializeApp() async {
-    // Start animation
     _animationController.forward();
 
-    // Check for forced update before anything else
-    final requiredVersion = await ApiConfig.checkForceUpdate();
-    if (requiredVersion != null && mounted) {
-      _showForceUpdateDialog(requiredVersion);
-      return;
-    }
+    try {
+      final requiredVersion = await ApiConfig.checkForceUpdate()
+          .timeout(const Duration(seconds: 6), onTimeout: () => null);
+      if (requiredVersion != null && mounted) {
+        _showForceUpdateDialog(requiredVersion);
+        return;
+      }
+    } catch (_) {}
 
-    // Check authentication status
+    if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.checkAuthStatus();
+    try {
+      await authProvider.checkAuthStatus()
+          .timeout(const Duration(seconds: 6), onTimeout: () {});
+    } catch (_) {}
 
-    // Wait for minimum splash duration
-    await Future.delayed(const Duration(seconds: 3));
+    await Future.delayed(const Duration(seconds: 2));
 
     if (mounted) {
       if (authProvider.isAuthenticated) {

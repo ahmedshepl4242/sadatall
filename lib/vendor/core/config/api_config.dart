@@ -52,7 +52,8 @@ class ApiConfig {
       final docSnapshot = await getFirestoreInstance()
           .collection(_collectionName)
           .doc(_documentName)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 8), onTimeout: () => throw Exception('timeout'));
       if (!docSnapshot.exists) return null;
       final requiredVersion =
           docSnapshot.data()?[_versionFieldName] as String?;
@@ -87,7 +88,8 @@ class ApiConfig {
       final docSnapshot = await getFirestoreInstance()
           .collection(_collectionName)
           .doc(_documentName)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 8), onTimeout: () => throw Exception('timeout'));
 
       if (docSnapshot.exists) {
         final docData = docSnapshot.data();

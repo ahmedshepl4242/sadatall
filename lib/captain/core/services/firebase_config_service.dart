@@ -64,7 +64,8 @@ class FirebaseConfigService {
       final docSnapshot = await firestore
           .collection(_collectionName)
           .doc(_documentName)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 8), onTimeout: () => throw Exception('timeout'));
 
       if (!docSnapshot.exists) return null;
 
@@ -116,7 +117,8 @@ class FirebaseConfigService {
       final docSnapshot = await firestore
           .collection(_collectionName)
           .doc(_documentName)
-          .get();
+          .get()
+          .timeout(const Duration(seconds: 8), onTimeout: () => throw Exception('timeout'));
 
       if (docSnapshot.exists) {
         final data = docSnapshot.data();
@@ -144,8 +146,11 @@ class FirebaseConfigService {
   static Future<String> getBaseUrlWithFallback() async {
     debugPrint('Starting base URL retrieval process...');
 
-    // First, try to fetch from Firestore
-    String? firestoreBaseUrl = await fetchBaseUrl();
+    String? firestoreBaseUrl;
+    try {
+      firestoreBaseUrl = await fetchBaseUrl()
+          .timeout(const Duration(seconds: 8), onTimeout: () => null);
+    } catch (_) {}
     if (firestoreBaseUrl != null) {
       // Update local storage with the fetched value and the ApiConfig
       await ApiConfig.setBaseUrlWithFallback(firestoreBaseUrl);
