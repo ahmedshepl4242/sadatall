@@ -47,15 +47,6 @@
 	<key>NSMicrophoneUsageDescription</key>
 	<string>نحتاج الميكروفون لتسجيل الرسائل الصوتية</string>
 
-	<!-- Background modes (location tracking + notifications) -->
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>fetch</string>
-		<string>location</string>
-		<string>processing</string>
-		<string>remote-notification</string>
-	</array>
-
 	<!-- Background task identifiers -->
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
