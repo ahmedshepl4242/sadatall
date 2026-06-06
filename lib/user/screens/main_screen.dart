@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import 'home/home_screen.dart';
 import 'vendors/vendors_list_screen.dart';
@@ -55,6 +57,11 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
+          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          if ((index == 2 || index == 3) && !authProvider.isAuthenticated) {
+            Navigator.of(context).pushNamed('/login');
+            return;
+          }
           setState(() {
             _currentIndex = index;
           });

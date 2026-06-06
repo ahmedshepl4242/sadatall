@@ -101,7 +101,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> logout() async {
     _setLoading(true);
-    
+
     try {
       await _authService.logout();
       _currentVendor = null;
@@ -113,6 +113,24 @@ class AuthProvider with ChangeNotifier {
       // Show user-friendly error message instead of just returning false
       if (kDebugMode) {
         print('خطأ غير متوقع أثناء تسجيل الخروج: ${e.toString()}');
+      }
+      return false;
+    }
+  }
+
+  Future<bool> deleteAccount() async {
+    _setLoading(true);
+
+    try {
+      await _authService.deleteAccount();
+      _currentVendor = null;
+      _isAuthenticated = false;
+      _setLoading(false);
+      return true;
+    } catch (e) {
+      _setLoading(false);
+      if (kDebugMode) {
+        print('خطأ غير متوقع أثناء حذف الحساب: ${e.toString()}');
       }
       return false;
     }

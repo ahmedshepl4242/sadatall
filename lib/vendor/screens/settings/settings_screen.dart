@@ -13,6 +13,23 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  Future<void> _deleteAccount() async {
+    final confirmed = await _showConfirmDialog(
+      'حذف الحساب',
+      'هل أنت متأكد؟ سيتم حذف جميع بياناتك نهائياً ولا يمكن التراجع عن هذا الإجراء.',
+    );
+
+    if (confirmed) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      await authProvider.deleteAccount();
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('selected_app_mode');
+
+      appModeNotifier.value = null;
+    }
+  }
+
   Future<void> _logout() async {
     final confirmed = await _showConfirmDialog(
       'تسجيل الخروج',
@@ -208,6 +225,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 color: Colors.red,
               ),
               onTap: _logout,
+              titleColor: Colors.red,
+            ),
+            const Divider(),
+            _buildSettingTile(
+              icon: Icons.delete_forever,
+              title: 'حذف الحساب',
+              subtitle: 'حذف حسابك وجميع بياناتك نهائياً',
+              trailing: const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.red,
+              ),
+              onTap: _deleteAccount,
               titleColor: Colors.red,
             ),
           ],

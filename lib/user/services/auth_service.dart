@@ -162,6 +162,17 @@ class AuthService {
     }
   }
 
+  Future<bool> deleteAccount() async {
+    try {
+      await _apiService.delete(AppConstants.deleteAccountEndpoint);
+      await _storageService.clearAllTokens();
+      return true;
+    } catch (e) {
+      await _storageService.clearAllTokens();
+      return true;
+    }
+  }
+
   Future<bool> isLoggedIn() async {
     try {
       final token = await _storageService.getAccessToken();

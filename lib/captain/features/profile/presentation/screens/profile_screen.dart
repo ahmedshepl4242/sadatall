@@ -306,9 +306,50 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               type: ButtonType.outlined,
               icon: Icons.logout,
             ),
+            const SizedBox(height: 12),
+            CustomButton(
+              text: 'حذف الحساب',
+              onPressed: () => _showDeleteAccountDialog(context),
+              type: ButtonType.outlined,
+              icon: Icons.delete_forever,
+            ),
           ],
         ),
       ),
+    );
+  }
+
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          title: const Text('حذف الحساب'),
+          content: const Text(
+            'هل أنت متأكد؟ سيتم حذف جميع بياناتك نهائياً ولا يمكن التراجع عن هذا الإجراء.',
+          ),
+          actions: [
+            TextButton(
+              child: const Text('إلغاء'),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            TextButton(
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('حذف'),
+              onPressed: () async {
+                Navigator.of(dialogContext).pop();
+
+                await ref.read(authStateProvider.notifier).deleteAccount();
+
+                final prefs = await SharedPreferences.getInstance();
+                await prefs.remove('selected_app_mode');
+
+                appModeNotifier.value = null;
+              },
+            ),
+          ],
+        );
+      },
     );
   }
 

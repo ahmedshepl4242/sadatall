@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sadat_delivery_merged/app_mode.dart';
 import '../../widgets/common/custom_text_field.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../utils/validators.dart';
-import '../../services/auth_service.dart';
+import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _authService = AuthService();
 
   bool _isLoading = false;
 
@@ -40,9 +40,10 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final result = await _authService.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final success = await authProvider.loginUser(
+        _emailController.text.trim(),
+        _passwordController.text,
       );
 
       if (mounted) {
@@ -50,22 +51,23 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
 
-        if (result.success) {
-          // store token
-
+        if (success) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.message ?? 'تم تسجيل الدخول بنجاح'),
+            const SnackBar(
+              content: Text('تم تسجيل الدخول بنجاح'),
               backgroundColor: AppTheme.successColor,
             ),
           );
 
-          // Navigate to main screen
-          Navigator.of(context).pushReplacementNamed('/main');
+          if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          } else {
+            Navigator.of(context).pushReplacementNamed('/main');
+          }
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(result.error ?? 'فشل تسجيل الدخول'),
+            const SnackBar(
+              content: Text('فشل تسجيل الدخول'),
               backgroundColor: AppTheme.errorColor,
             ),
           );

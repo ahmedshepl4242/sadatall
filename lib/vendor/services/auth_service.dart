@@ -165,6 +165,20 @@ class AuthService {
     }
   }
 
+  Future<bool> deleteAccount() async {
+    try {
+      await _apiService.delete(AppConstants.deleteAccountEndpoint);
+      await _storageService.clearAllTokens();
+      return true;
+    } catch (e) {
+      await _storageService.clearAllTokens();
+      if (kDebugMode) {
+        print('خطأ غير متوقع أثناء حذف الحساب: ${e.toString()}');
+      }
+      return true;
+    }
+  }
+
   Future<bool> isLoggedIn() async {
     final token = await _storageService.getAccessToken();
     return token != null;

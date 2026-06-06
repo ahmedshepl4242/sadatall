@@ -110,8 +110,19 @@ class AuthService {
     // Clear tokens from secure storage
     await _storageService.deleteSecureString(StorageService.keyAuthToken);
     await _storageService.deleteSecureString(StorageService.keyRefreshToken);
-    
+
     // Clear tokens from ApiClient
+    _apiClient.clearAuthToken();
+  }
+
+  Future<void> deleteAccount() async {
+    try {
+      await _apiClient.delete(ApiConfig.deleteAccount);
+    } catch (_) {
+      // Proceed with local cleanup regardless of server response
+    }
+    await _storageService.deleteSecureString(StorageService.keyAuthToken);
+    await _storageService.deleteSecureString(StorageService.keyRefreshToken);
     _apiClient.clearAuthToken();
   }
 }

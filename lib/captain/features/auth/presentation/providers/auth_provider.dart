@@ -309,6 +309,20 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  Future<void> deleteAccount() async {
+    state = state.copyWith(isLoading: true);
+
+    try {
+      _locationService.stopTracking();
+      await _authService.deleteAccount();
+      await _storageService.remove(StorageService.keyCaptainData);
+      await _notificationService.cancelTokenListener();
+      state = const AuthState();
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: AppUtils.getLocalizedErrorMessage(e));
+    }
+  }
+
   void clearError() {
     state = state.copyWith(error: null);
   }

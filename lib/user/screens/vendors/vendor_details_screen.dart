@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../models/vendor.dart';
 import '../../models/menu_item.dart';
 import '../../models/product_item.dart';
@@ -1141,6 +1143,12 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
   }
 
   Future<void> _updateCartItem(ProductItem product, int delta) async {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.isAuthenticated) {
+      Navigator.of(context).pushNamed('/login');
+      return;
+    }
+
     // Check if we need to switch vendors
     if (delta > 0 && _cartService.needsVendorSwitch(widget.vendor.id)) {
       final confirmed = await _showVendorSwitchDialog();
