@@ -11,7 +11,7 @@ class AppConstants {
   static const String signupEndpoint = '/auth/signup/vendor';
   static const String refreshTokenEndpoint = '/auth/refresh-token';
   static const String logoutEndpoint = '/auth/logout';
-  static const String deleteAccountEndpoint = '/vendors/delete-account';
+  static const String deleteAccountEndpoint = '/vendors/account';
 
   // Vendor Endpoints
   static const String vendorProfileEndpoint = '/vendors/profile';

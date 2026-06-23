@@ -21,7 +21,7 @@ class ApiConfig {
   static const String authSignup = '/auth/signup/captain';
   static const String authLogin = '/auth/login/captain';
   static const String refreshTokenEndpoint = '/auth/refresh-token';
-  static const String deleteAccount = '/captains/delete-account';
+  static const String deleteAccount = '/captains/account';
 
   // Captain endpoints
   static const String captainsProfile = '/captains/profile';
