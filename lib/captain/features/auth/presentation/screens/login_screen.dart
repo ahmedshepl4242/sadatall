@@ -148,14 +148,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     await prefs.remove('selected_app_mode');
                     appModeNotifier.value = null;
                   },
-                  icon: const Icon(
-                    Icons.swap_horiz,
-                    color: AppColors.onSurfaceVariant,
-                  ),
-                  label: const Text(
-                    'تغيير الوضع',
-                    style: TextStyle(color: AppColors.onSurfaceVariant),
-                  ),
+                  icon: const Icon(Icons.swap_horiz,
+                      color: AppColors.onSurfaceVariant),
+                  label: const Text('تغيير الوضع',
+                      style: TextStyle(color: AppColors.onSurfaceVariant)),
                 ),
                 const SizedBox(height: 40),
               ],

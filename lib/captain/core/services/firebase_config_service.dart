@@ -11,18 +11,7 @@ class FirebaseConfigService {
   static const String _fieldName = 'value';
   static const String _versionFieldName = 'version_captain';
 
-  // Firebase configuration - this will be used when initializing if needed
-  static const FirebaseOptions _firebaseOptions = FirebaseOptions(
-    apiKey: 'AIzaSyAmMuMfOZzFJYZ2FpNIGN3f3C2Pug5cBHc',
-    authDomain: 'buss-3c283.firebaseapp.com',
-    projectId: 'buss-3c283',
-    storageBucket: 'buss-3c283.firebasestorage.app',
-    messagingSenderId: '793738063888',
-    appId: '1:793738063888:web:a371b6c0aff3ca6e135a95',
-    measurementId: 'G-G5XZ20LLGH',
-  );
-
-  /// Returns true if [required] version is strictly greater than [current].
+/// Returns true if [required] version is strictly greater than [current].
   /// Both strings must be in "MAJOR.MINOR.PATCH" format.
   static bool _isUpdateRequired(String current, String required) {
     final currentParts = current.trim().split('.').map(int.tryParse).toList();
@@ -46,19 +35,7 @@ class FirebaseConfigService {
   /// could not be completed (fail-open on network errors).
   static Future<String?> checkForceUpdate() async {
     try {
-      FirebaseApp? app;
-      try {
-        app = Firebase.app('delivery_app_config');
-      } catch (_) {
-        try {
-          app = await Firebase.initializeApp(
-            name: 'delivery_app_config',
-            options: _firebaseOptions,
-          );
-        } catch (_) {
-          app = Firebase.app();
-        }
-      }
+      final app = _getOrUseDefaultApp();
 
       final firestore = FirebaseFirestore.instanceFor(app: app);
       final docSnapshot = await firestore
@@ -88,29 +65,20 @@ class FirebaseConfigService {
     return null;
   }
 
+  /// Returns the named app if it exists, otherwise the default app.
+  /// Never calls initializeApp — avoids triggering didReinitializeFirebaseCore.
+  static FirebaseApp _getOrUseDefaultApp() {
+    try {
+      return Firebase.app('delivery_app_config');
+    } catch (_) {
+      return Firebase.app();
+    }
+  }
+
   /// Fetch the base URL from Firestore
   static Future<String?> fetchBaseUrl() async {
     try {
-      // Attempt to get the default Firebase app (initialized in main method)
-      // If it doesn't exist, initialize our specific app
-
-      // Check if the named app already exists, otherwise use default
-      FirebaseApp? app;
-      try {
-        app = Firebase.app('delivery_app_config');
-      } catch (e) {
-        // Named app doesn't exist, try to initialize with our config
-        try {
-          app = await Firebase.initializeApp(
-            name: 'delivery_app_config',
-            options: _firebaseOptions,
-          );
-        } catch (initError) {
-          // If named initialization fails, use the default app (already initialized in main)
-          print('Using default Firebase app instead of named app');
-          app = Firebase.app();
-        }
-      }
+      final app = _getOrUseDefaultApp();
 
       final firestore = FirebaseFirestore.instanceFor(app: app);
 

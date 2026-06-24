@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../core/config/config_service.dart';
 import '../providers/auth_provider.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -50,16 +48,6 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _initializeApp() async {
     _animationController.forward();
 
-    // Check for forced update with timeout so it never hangs
-    try {
-      final requiredVersion = await ConfigService.checkForceUpdate()
-          .timeout(const Duration(seconds: 6), onTimeout: () => null);
-      if (requiredVersion != null && mounted) {
-        _showForceUpdateDialog(requiredVersion);
-        return;
-      }
-    } catch (_) {}
-
     // Check authentication status with timeout
     if (!mounted) return;
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -74,39 +62,6 @@ class _SplashScreenState extends State<SplashScreen>
     if (mounted) {
       Navigator.of(context).pushReplacementNamed('/dashboard');
     }
-  }
-
-  void _showForceUpdateDialog(String requiredVersion) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return PopScope(
-          canPop: false,
-          child: AlertDialog(
-            title: const Text('تحديث مطلوب', textAlign: TextAlign.center),
-            content: Text(
-              'يتطلب التطبيق تحديثاً إلى الإصدار $requiredVersion أو أحدث.\n'
-              'يرجى تحديث التطبيق للمتابعة.',
-              textAlign: TextAlign.center,
-            ),
-            actions: [
-              TextButton(
-                onPressed: () async {
-                  const storeUrl =
-                      'https://play.google.com/store/apps/details?id=sadat.delivery.com';
-                  final uri = Uri.parse(storeUrl);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: const Text('تحديث الآن'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override

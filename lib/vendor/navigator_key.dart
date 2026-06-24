@@ -1,1 +1,3 @@
-export 'package:sadat_delivery_merged/main.dart' show navigatorKey;
+import 'package:flutter/material.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();

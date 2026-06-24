@@ -5,7 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart'
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // App mode
 import 'app_mode.dart';
@@ -48,6 +51,57 @@ import 'user/screens/splash_screen.dart' as user_splash;
 import 'user/screens/main_screen.dart' as user_main;
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+// Separate key for the mode selector so it never reuses a mode app's navigator state.
+final GlobalKey<NavigatorState> _modeSelectorNavigatorKey = GlobalKey<NavigatorState>();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SHARED FORCE-UPDATE HELPER
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Returns the required version string if a force-update is needed,
+/// or null if the app is up to date / the check could not be completed.
+Future<String?> _checkForceUpdateForMode(String mode) async {
+  try {
+    final snap = await FirebaseFirestore.instance
+        .collection('delivery_app_config')
+        .doc('base_url')
+        .get(const GetOptions(source: Source.server))
+        .timeout(
+          const Duration(seconds: 10),
+          onTimeout: () => throw Exception('timeout'),
+        );
+    if (!snap.exists) return null;
+    final required = snap.data()?['version_user'] as String?;
+    debugPrint('Force update check — required: $required');
+    if (required == null || required.isEmpty) return null;
+    final info = await PackageInfo.fromPlatform();
+    final current = info.version;
+    debugPrint('Force update check — current: $current');
+    final c = current
+        .trim()
+        .split('.')
+        .map((p) => int.tryParse(p) ?? 0)
+        .toList();
+    final r = required
+        .trim()
+        .split('.')
+        .map((p) => int.tryParse(p) ?? 0)
+        .toList();
+    while (c.length < 3) {
+      c.add(0);
+    }
+    while (r.length < 3) {
+      r.add(0);
+    }
+    for (int i = 0; i < 3; i++) {
+      if (r[i] > c[i]) return required;
+      if (r[i] < c[i]) return null;
+    }
+  } catch (e) {
+    debugPrint('Force update check failed: $e');
+  }
+  return null;
+}
 
 Future<void> initializeAppMode(String mode) async {
   if (mode == AppMode.captain.name) {
@@ -133,7 +187,6 @@ class RootApp extends StatefulWidget {
 
 class _RootAppState extends State<RootApp> {
   String? _initializedMode;
-  bool _isInitializing = false;
 
   @override
   void initState() {
@@ -141,12 +194,79 @@ class _RootAppState extends State<RootApp> {
     _initializedMode = widget.initialMode;
     appModeNotifier.value = widget.initialMode;
     appModeNotifier.addListener(_onModeChanged);
+    // Delay slightly so Firebase finishes settling after main() initialization.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) _runForceUpdateCheck(widget.initialMode ?? '');
+    });
   }
 
   @override
   void dispose() {
     appModeNotifier.removeListener(_onModeChanged);
     super.dispose();
+  }
+
+  Future<void> _runForceUpdateCheck(String mode) async {
+    debugPrint('Running force update check for mode: $mode');
+    final requiredVersion = await _checkForceUpdateForMode(mode);
+    if (requiredVersion != null && mounted) {
+      _showForceUpdateDialog(requiredVersion);
+    }
+  }
+
+  Future<void> _showForceUpdateDialog(String requiredVersion) async {
+    // Wait until the navigator is mounted (Firestore result may arrive before
+    // the child MaterialApp finishes building its first frame).
+    for (int i = 0; i < 20; i++) {
+      if (navigatorKey.currentState?.overlay != null) break;
+      if (_modeSelectorNavigatorKey.currentState?.overlay != null) break;
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    final nav = navigatorKey.currentState?.overlay != null
+        ? navigatorKey.currentState
+        : _modeSelectorNavigatorKey.currentState;
+    if (nav == null || nav.overlay == null) {
+      debugPrint('Force update dialog: navigator not available, skipping');
+      return;
+    }
+    // Use navigator.push with a transparent route to avoid touching BuildContext
+    // after an async gap (which triggers a lint warning).
+    nav.push(
+      PageRouteBuilder<void>(
+        opaque: false,
+        barrierDismissible: false,
+        barrierColor: Colors.black54,
+        pageBuilder: (_, __, ___) => PopScope(
+          canPop: false,
+          child: Scaffold(
+            backgroundColor: Colors.transparent,
+            body: Center(
+              child: AlertDialog(
+                title: const Text('تحديث مطلوب', textAlign: TextAlign.center),
+                content: Text(
+                  'يتطلب التطبيق تحديثاً إلى الإصدار $requiredVersion أو أحدث.\n'
+                  'يرجى تحديث التطبيق للمتابعة.',
+                  textAlign: TextAlign.center,
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      const storeUrl =
+                          'https://play.google.com/store/apps/details?id=sadat.delivery.com';
+                      final uri = Uri.parse(storeUrl);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      }
+                    },
+                    child: const Text('تحديث الآن'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _onModeChanged() async {
@@ -165,35 +285,31 @@ class _RootAppState extends State<RootApp> {
       return;
     }
 
-    if (mounted) {
-      setState(() {
-        _isInitializing = true;
-      });
-    }
-
-    await initializeAppMode(newMode);
+    // Fire initialization in the background and show the app immediately.
+    // Each mode's splash/auth screen handles its own loading state.
+    initializeAppMode(newMode).ignore();
 
     if (mounted) {
       setState(() {
         _initializedMode = newMode;
-        _isInitializing = false;
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isInitializing) {
-      return const MaterialApp(
-        debugShowCheckedModeBanner: false,
-        home: Scaffold(body: Center(child: CircularProgressIndicator())),
-      );
-    }
-
     final mode = appModeNotifier.value;
     if (mode == null) {
       return MaterialApp(
+        navigatorKey: _modeSelectorNavigatorKey,
         debugShowCheckedModeBanner: false,
+        locale: const Locale('ar', 'SA'),
+        supportedLocales: const [Locale('ar', 'SA'), Locale('en', 'US')],
+        localizationsDelegates: const [
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
         home: const ModeSelectorScreen(),
       );
     }
@@ -215,6 +331,7 @@ class _CaptainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       title: 'تعالالي _T3alaly',
       theme: captain_theme.AppTheme.light,
       home: const _CaptainAuthWrapper(),
@@ -242,37 +359,6 @@ class _CaptainAuthWrapper extends ConsumerStatefulWidget {
 
 class _CaptainAuthWrapperState extends ConsumerState<_CaptainAuthWrapper> {
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkVersion());
-  }
-
-  Future<void> _checkVersion() async {
-    final v = await FirebaseConfigService.checkForceUpdate();
-    if (v != null && mounted) _showUpdateDialog(v);
-  }
-
-  void _showUpdateDialog(String v) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => PopScope(
-        canPop: false,
-        child: AlertDialog(
-          title: const Text('تحديث مطلوب', textAlign: TextAlign.center),
-          content: Text(
-            'يتطلب التطبيق تحديثاً إلى الإصدار $v أو أحدث.',
-            textAlign: TextAlign.center,
-          ),
-          actions: [
-            TextButton(onPressed: () {}, child: const Text('تحديث الآن')),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
   Widget build(BuildContext context) {
     final authState = ref.watch(captain_auth.authStateProvider);
     if (authState.isLoading) {
@@ -292,9 +378,7 @@ class _VendorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: _vendorAuthProvider),
-      ],
+      providers: [ChangeNotifierProvider.value(value: _vendorAuthProvider)],
       child: MaterialApp(
         navigatorKey: navigatorKey,
         title: 'تعالالي _T3alaly',

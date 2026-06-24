@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -28,7 +27,6 @@ class ApiConfig {
   static const String _versionFieldName = 'version_vendor';
 
   static String? _cachedBaseUrl;
-  static bool _initialized = false;
 
   /// Returns true if [required] version is strictly greater than [current].
   static bool _isUpdateRequired(String current, String required) {
@@ -116,37 +114,12 @@ class ApiConfig {
     }
   }
 
-  // Initialize Firebase app with specific name to avoid conflicts
-  static Future<void> _initializeFirebaseApp() async {
-    if (!_initialized) {
-      try {
-        // Initialize Firebase app with custom name to avoid conflict with existing app
-        await Firebase.initializeApp(
-          name: 'api_fetcher',
-          options: const FirebaseOptions(
-              apiKey: "AIzaSyAmMuMfOZzFJYZ2FpNIGN3f3C2Pug5cBHc",
-              authDomain: "buss-3c283.firebaseapp.com",
-              projectId: "buss-3c283",
-              storageBucket: "buss-3c283.firebasestorage.app",
-              messagingSenderId: "793738063888",
-              appId: "1:793738063888:web:a371b6c0aff3ca6e135a95",
-              measurementId: "G-G5XZ20LLGH"),
-        );
-        _initialized = true;
-      } catch (e) {
-        // App might already be initialized, which is fine
+  // Firebase is initialized once in main() — no secondary app needed.
+  static Future<void> _initializeFirebaseApp() async {}
 
-        _initialized = true;
-      }
-    }
-  }
-
-  // Get Firestore instance for the specific app
+  // Always use the default Firestore instance.
   static FirebaseFirestore getFirestoreInstance() {
-    return _initialized
-        ? FirebaseFirestore.instanceFor(
-            app: Firebase.apps.firstWhere((app) => app.name == 'api_fetcher'))
-        : FirebaseFirestore.instance;
+    return FirebaseFirestore.instance;
   }
 
   // Save base URL to local storage
