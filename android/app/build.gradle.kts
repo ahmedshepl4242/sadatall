@@ -14,7 +14,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "sadat.delivery.solvy.com"
+    namespace = "sadat.delivery.com"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.2.13676358"
 
@@ -29,7 +29,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "sadat.delivery.solvy.com"
+        applicationId = "sadat.delivery.com"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

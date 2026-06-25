@@ -1,4 +1,4 @@
-package sadat.delivery.solvy.com
+package sadat.delivery.com
 
 import io.flutter.embedding.android.FlutterActivity
 
