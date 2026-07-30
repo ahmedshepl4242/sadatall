@@ -1,8 +1,121 @@
+import 'dart:convert';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import 'package:sadat_delivery_merged/main.dart' show navigatorKey;
+import 'package:sadat_delivery_merged/user/main.dart' show openOffersTab;
+import 'package:sadat_delivery_merged/user/screens/orders/order_details_screen.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
+import 'user_order_service.dart';
+
+const Set<String> _kOrderNotificationTypes = {
+  'NEW_ORDER',
+  'COUNTER_OFFER',
+  'ORDER_APPROVED',
+  'DELIVERY_AVAILABLE',
+  'CAPTAIN_ASSIGNED',
+  'ORDER_CANCELLED',
+  'ORDER_DELIVERED',
+  'CAPTAIN_ARRIVED',
+  'SPECIAL_ORDER',
+};
+
+@pragma('vm:entry-point')
+Future<void> userFirebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  _handleUserNotificationData(message.data);
+}
+
+void _handleUserNotificationData(Map<String, dynamic> data) {
+  final String? type = data['type'] as String?;
+  final String? orderId = data['orderId'] as String?;
+  final String? newStatus = data['status'] as String?;
+  final String? captainName = data['captainName'] as String?;
+
+  switch (type) {
+    case 'order_status_update':
+      ('Order status update for order: $orderId, new status: $newStatus');
+      break;
+    case 'new_order_confirmation':
+      ('New order confirmation for order: $orderId');
+      break;
+    case 'captain_assigned':
+      ('Captain $captainName assigned to order: $orderId');
+      break;
+    case 'order_delivered':
+      ('Order delivered: $orderId');
+      break;
+    case 'order_cancelled':
+      ('Order cancelled: $orderId');
+      break;
+    case 'ANNOUNCEMENT':
+      openOffersTab.value = DateTime.now().millisecondsSinceEpoch;
+      break;
+  }
+}
+
+/// Handles a notification tap: if it carries an order-related type and an
+/// orderId, fetches that order and pushes the order details screen.
+Future<void> _handleUserNotificationTap(Map<String, dynamic> data) async {
+  final type = data['type'] as String?;
+  final orderId = data['orderId'] as String?;
+  if (orderId == null || orderId.isEmpty) return;
+  if (type != null && !_kOrderNotificationTypes.contains(type)) return;
+
+  final navState = navigatorKey.currentState;
+  if (navState == null) return;
+
+  navState.push(
+    MaterialPageRoute(
+      builder: (_) => _OrderLoadingScreen(orderId: orderId),
+    ),
+  );
+}
+
+/// Lightweight screen shown immediately on notification tap while the full
+/// order is fetched, then replaced with the real order details screen.
+class _OrderLoadingScreen extends StatefulWidget {
+  final String orderId;
+  const _OrderLoadingScreen({required this.orderId});
+
+  @override
+  State<_OrderLoadingScreen> createState() => _OrderLoadingScreenState();
+}
+
+class _OrderLoadingScreenState extends State<_OrderLoadingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final response = await UserOrderService().getOrderById(widget.orderId);
+    if (!mounted) return;
+
+    if (response.success && response.data != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => OrderDetailsScreen(order: response.data!),
+        ),
+      );
+    } else {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response.error ?? 'تعذر تحميل الطلب')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -44,16 +157,41 @@ class NotificationService {
       onDidReceiveNotificationResponse: onDidReceiveNotificationResponse,
     );
 
+    // Create notification channel with image support
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'channel_id',
+      'channel_name',
+      description: 'channel_description',
+      importance: Importance.max,
+      showBadge: true,
+      enableLights: true,
+    );
+    await _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+
     // Handle foreground messages
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
     // Handle background messages
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    FirebaseMessaging.onBackgroundMessage(userFirebaseMessagingBackgroundHandler);
+
+    // Handle notification tap when app is backgrounded
+    FirebaseMessaging.onMessageOpenedApp.listen((message) {
+      _handleUserNotificationTap(message.data);
+    });
+
+    // Handle notification tap when app was launched from a terminated state
+    final initialMessage = await _firebaseMessaging.getInitialMessage();
+    if (initialMessage != null) {
+      _handleUserNotificationTap(initialMessage.data);
+    }
 
     // Get the token
     _fcmToken = await _firebaseMessaging.getToken();
     if (_fcmToken != null) {
-      print('FCM Token: $_fcmToken');
+      ('FCM Token: $_fcmToken');
       // Send token to backend
       await _sendTokenToBackend(_fcmToken!);
     }
@@ -61,7 +199,7 @@ class NotificationService {
     // Listen for token refresh
     _firebaseMessaging.onTokenRefresh.listen((newToken) async {
       _fcmToken = newToken;
-      print('FCM Token refreshed: $newToken');
+      ('FCM Token refreshed: $newToken');
       // Send new token to backend
       await _sendTokenToBackend(newToken);
     });
@@ -77,14 +215,14 @@ class NotificationService {
         final apiService = ApiService();
         await apiService.updateFCMToken(token);
         if (kDebugMode) {
-          print('FCM token sent to backend successfully');
+          ('FCM token sent to backend successfully');
         }
       } else if (kDebugMode) {
-        print('Skipping FCM token update - user not logged in');
+        ('Skipping FCM token update - user not logged in');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error sending FCM token to backend: $e');
+        ('Error sending FCM token to backend: $e');
       }
     }
   }
@@ -96,83 +234,91 @@ class NotificationService {
     }
   }
 
-  void _handleForegroundMessage(RemoteMessage message) {
-    print('Foreground message received: ${message.notification?.title}');
-    
-    // Show local notification
-    _showLocalNotification(
+  Future<void> _handleForegroundMessage(RemoteMessage message) async {
+    ('Foreground message received: ${message.notification?.title}');
+
+    final imageUrl = message.data['imageUrl'] as String?
+        ?? message.notification?.android?.imageUrl;
+
+    ('Foreground imageUrl: $imageUrl');
+
+    await _showLocalNotification(
       message.notification?.title ?? 'New Notification',
       message.notification?.body ?? '',
+      imageUrl: imageUrl,
+      data: message.data,
     );
-    
-    // Handle specific notification types
-    _handleNotificationData(message.data);
-  }
 
-  static Future<void> _firebaseMessagingBackgroundHandler(
-      RemoteMessage message) async {
-    print('Background message received: ${message.notification?.title}');
-    
-    // Handle specific notification types in background
-    _handleNotificationData(message.data);
-  }
-
-  static void _handleNotificationData(Map<String, dynamic> data) {
-    final String? type = data['type'] as String?;
-    final String? orderId = data['orderId'] as String?;
-    final String? newStatus = data['status'] as String?;
-    final String? captainName = data['captainName'] as String?;
-
-    switch (type) {
-      case 'order_status_update':
-        // Handle order status update
-        print('Order status update for order: $orderId, new status: $newStatus');
-        break;
-      case 'new_order_confirmation':
-        // Handle new order confirmation
-        print('New order confirmation for order: $orderId');
-        break;
-      case 'captain_assigned':
-        // Handle captain assigned
-        print('Captain $captainName assigned to order: $orderId');
-        break;
-      case 'order_delivered':
-        // Handle order delivered
-        print('Order delivered: $orderId');
-        break;
-      case 'order_cancelled':
-        // Handle order cancelled
-        print('Order cancelled: $orderId');
-        break;
-    }
+    _handleUserNotificationData(message.data);
   }
 
   void onDidReceiveNotificationResponse(NotificationResponse response) {
     // Handle notification tap
-    print('Notification tapped: ${response.payload}');
+    ('Notification tapped: ${response.payload}');
+    final payload = response.payload;
+    if (payload == null || payload.isEmpty) return;
+    try {
+      final data = jsonDecode(payload) as Map<String, dynamic>;
+      _handleUserNotificationTap(data);
+    } catch (e) {
+      if (kDebugMode) {
+        ('Failed to parse notification payload: $e');
+      }
+    }
   }
 
-  Future<void> _showLocalNotification(String title, String body) async {
-    const AndroidNotificationDetails androidNotificationDetails =
-        AndroidNotificationDetails(
-      'channel_id',
-      'channel_name',
-      channelDescription: 'channel_description',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-    
-    const NotificationDetails notificationDetails = NotificationDetails(
+  Future<void> _showLocalNotification(String title, String body,
+      {String? imageUrl, Map<String, dynamic>? data}) async {
+    AndroidNotificationDetails androidNotificationDetails;
+
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      final ByteArrayAndroidBitmap? bigPicture = await _loadNetworkImage(imageUrl);
+      androidNotificationDetails = AndroidNotificationDetails(
+        'channel_id',
+        'channel_name',
+        channelDescription: 'channel_description',
+        importance: Importance.max,
+        priority: Priority.high,
+        styleInformation: bigPicture != null
+            ? BigPictureStyleInformation(
+                bigPicture,
+                contentTitle: title,
+                summaryText: body,
+              )
+            : null,
+      );
+    } else {
+      androidNotificationDetails = const AndroidNotificationDetails(
+        'channel_id',
+        'channel_name',
+        channelDescription: 'channel_description',
+        importance: Importance.max,
+        priority: Priority.high,
+      );
+    }
+
+    final notificationDetails = NotificationDetails(
       android: androidNotificationDetails,
-      iOS: DarwinNotificationDetails(),
+      iOS: const DarwinNotificationDetails(),
     );
-    
+
     await _flutterLocalNotificationsPlugin.show(
       0,
       title,
       body,
       notificationDetails,
+      payload: data != null ? jsonEncode(data) : null,
     );
+  }
+
+  Future<ByteArrayAndroidBitmap?> _loadNetworkImage(String url) async {
+    try {
+      final http.Response response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        return ByteArrayAndroidBitmap(response.bodyBytes);
+      }
+    } catch (_) {}
+    return null;
   }
 
   Future<String?> getToken() async {

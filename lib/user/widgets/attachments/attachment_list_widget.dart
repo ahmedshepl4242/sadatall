@@ -40,7 +40,37 @@ class _AttachmentListWidgetState extends State<AttachmentListWidget> {
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
+  void _showImageSourcePicker() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) {
+        return SafeArea(
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('اختيار من المعرض'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImages();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('التقاط صورة مباشرة'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  _pickImages(fromCamera: true);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _pickImages({bool fromCamera = false}) async {
     try {
       // Check current image count
       final currentImageCount = widget.attachments
@@ -52,7 +82,14 @@ class _AttachmentListWidgetState extends State<AttachmentListWidget> {
         return;
       }
 
-      final List<XFile> images = await _imagePicker.pickMultiImage();
+      final List<XFile> images;
+      if (fromCamera) {
+        final XFile? photo =
+            await _imagePicker.pickImage(source: ImageSource.camera);
+        images = photo != null ? [photo] : [];
+      } else {
+        images = await _imagePicker.pickMultiImage();
+      }
 
       if (images.isEmpty) return;
 
@@ -123,7 +160,7 @@ class _AttachmentListWidgetState extends State<AttachmentListWidget> {
         _isUploading = false;
       });
       _showError('حدث خطأ أثناء رفع الصور');
-      print('Error picking images: $e');
+      ('Error picking images: $e');
     }
   }
 
@@ -155,7 +192,7 @@ class _AttachmentListWidgetState extends State<AttachmentListWidget> {
 
       return compressedFile;
     } catch (e) {
-      print('Error compressing image: $e');
+      ('Error compressing image: $e');
       return file;
     }
   }
@@ -228,7 +265,7 @@ class _AttachmentListWidgetState extends State<AttachmentListWidget> {
         _isUploading = false;
       });
       _showError('حدث خطأ أثناء تسجيل الملاحظة الصوتية');
-      print('Error recording voice: $e');
+      ('Error recording voice: $e');
     }
   }
 
@@ -286,7 +323,7 @@ class _AttachmentListWidgetState extends State<AttachmentListWidget> {
             ElevatedButton.icon(
               onPressed: _isUploading || imageCount >= AppConstants.maxImages
                   ? null
-                  : _pickImages,
+                  : _showImageSourcePicker,
               icon: const Icon(Icons.image, size: 18),
               label: Text('صورة ($imageCount/${AppConstants.maxImages})'),
               style: ElevatedButton.styleFrom(

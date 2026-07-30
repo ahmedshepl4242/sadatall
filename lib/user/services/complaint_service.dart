@@ -32,7 +32,7 @@ class ComplaintService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error submitting complaint: $e');
+        ('Error submitting complaint: $e');
       }
       return ApiResponse<Complaint>(
         success: false,
@@ -78,7 +78,7 @@ class ComplaintService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error fetching complaints: $e');
+        ('Error fetching complaints: $e');
       }
       return ApiResponse<Map<String, dynamic>>(
         success: false,
@@ -105,7 +105,7 @@ class ComplaintService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error deleting complaint: $e');
+        ('Error deleting complaint: $e');
       }
       return ApiResponse<dynamic>(
         success: false,

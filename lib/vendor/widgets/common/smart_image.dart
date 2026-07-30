@@ -1,5 +1,6 @@
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../utils/image_utils.dart';
 
 class SmartImage extends StatelessWidget {
@@ -33,29 +34,27 @@ class SmartImage extends StatelessWidget {
       return _buildBase64Image();
     }
 
-    // Assume it's a network URL
-    return Image.network(
-      imageSource!,
+    // Assume it's a network URL (typically a Wasabi pre-signed URL whose
+    // signature/expiry changes on every fetch for the same object). Cache by
+    // the stable path (without the query string) so repeated loads of the
+    // same image hit the disk cache instead of re-downloading every time.
+    return CachedNetworkImage(
+      imageUrl: imageSource!,
+      cacheKey: _stableCacheKey(imageSource!),
       width: width,
       height: height,
       fit: fit,
-      alignment: alignment,
-      loadingBuilder: (context, child, loadingProgress) {
-        if (loadingProgress == null) return child;
-        return loadingWidget ??
-            Center(
-              child: CircularProgressIndicator(
-                value: loadingProgress.expectedTotalBytes != null
-                    ? loadingProgress.cumulativeBytesLoaded /
-                        loadingProgress.expectedTotalBytes!
-                    : null,
-              ),
-            );
-      },
-      errorBuilder: (context, error, stackTrace) {
-        return _buildErrorWidget();
-      },
+      alignment: alignment is Alignment ? alignment as Alignment : Alignment.center,
+      placeholder: (context, url) =>
+          loadingWidget ?? const Center(child: CircularProgressIndicator()),
+      errorWidget: (context, url, error) => _buildErrorWidget(),
     );
+  }
+
+  String _stableCacheKey(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri == null) return url;
+    return uri.replace(query: '').toString();
   }
 
   Widget _buildBase64Image() {

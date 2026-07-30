@@ -1,6 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/material.dart' show debugPrint;
+import 'package:flutter/material.dart' show debug, debugPrint;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../config/api_config.dart';
@@ -11,7 +11,7 @@ class FirebaseConfigService {
   static const String _fieldName = 'value';
   static const String _versionFieldName = 'version_captain';
 
-/// Returns true if [required] version is strictly greater than [current].
+  /// Returns true if [required] version is strictly greater than [current].
   /// Both strings must be in "MAJOR.MINOR.PATCH" format.
   static bool _isUpdateRequired(String current, String required) {
     final currentParts = current.trim().split('.').map(int.tryParse).toList();
@@ -42,7 +42,10 @@ class FirebaseConfigService {
           .collection(_collectionName)
           .doc(_documentName)
           .get()
-          .timeout(const Duration(seconds: 8), onTimeout: () => throw Exception('timeout'));
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () => throw Exception('timeout'),
+          );
 
       if (!docSnapshot.exists) return null;
 
@@ -86,21 +89,24 @@ class FirebaseConfigService {
           .collection(_collectionName)
           .doc(_documentName)
           .get()
-          .timeout(const Duration(seconds: 8), onTimeout: () => throw Exception('timeout'));
+          .timeout(
+            const Duration(seconds: 8),
+            onTimeout: () => throw Exception('timeout'),
+          );
 
       if (docSnapshot.exists) {
         final data = docSnapshot.data();
         final baseUrl = data?[_fieldName] as String?;
 
         if (baseUrl != null && baseUrl.isNotEmpty) {
-          print('Successfully fetched base URL from Firestore: $baseUrl');
+          ('Successfully fetched base URL from Firestore: $baseUrl');
           return baseUrl;
         }
       } else {
-        print('Base URL document does not exist in Firestore');
+        ('Base URL document does not exist in Firestore');
       }
     } catch (e) {
-      print('Error fetching base URL from Firestore: $e');
+      ('Error fetching base URL from Firestore: $e');
     }
 
     // Return null if fetching fails
@@ -112,17 +118,26 @@ class FirebaseConfigService {
   /// 2. If that fails, use cached value from local storage
   /// 3. If no cached value exists, use default fallback
   static Future<String> getBaseUrlWithFallback() async {
+    const testUrl = String.fromEnvironment('TEST_BASE_URL');
+    if (testUrl.isNotEmpty) {
+      ApiConfig.baseUrl = testUrl;
+      debugPrint('Using test base URL from environment: $testUrl');
+
+      return testUrl;
+    }
     debugPrint('Starting base URL retrieval process...');
 
     String? firestoreBaseUrl;
     try {
-      firestoreBaseUrl = await fetchBaseUrl()
-          .timeout(const Duration(seconds: 8), onTimeout: () => null);
+      firestoreBaseUrl = await fetchBaseUrl().timeout(
+        const Duration(seconds: 8),
+        onTimeout: () => null,
+      );
     } catch (_) {}
     if (firestoreBaseUrl != null) {
       // Update local storage with the fetched value and the ApiConfig
       await ApiConfig.setBaseUrlWithFallback(firestoreBaseUrl);
-      print('Using base URL from Firestore: $firestoreBaseUrl');
+      ('Using base URL from Firestore: $firestoreBaseUrl');
       return firestoreBaseUrl;
     }
 
@@ -133,15 +148,15 @@ class FirebaseConfigService {
           cachedBaseUrl != ApiConfig.defaultBaseUrl) {
         // Update the ApiConfig with the cached value
         ApiConfig.baseUrl = cachedBaseUrl;
-        print('Using cached base URL from local storage: $cachedBaseUrl');
+        ('Using cached base URL from local storage: $cachedBaseUrl');
         return cachedBaseUrl;
       }
     } catch (e) {
-      print('Error retrieving cached base URL: $e');
+      ('Error retrieving cached base URL: $e');
     }
 
     // If everything else fails, return the default fallback
-    print('Using default fallback base URL: ${ApiConfig.defaultBaseUrl}');
+    ('Using default fallback base URL: ${ApiConfig.defaultBaseUrl}');
     return ApiConfig.defaultBaseUrl;
   }
 

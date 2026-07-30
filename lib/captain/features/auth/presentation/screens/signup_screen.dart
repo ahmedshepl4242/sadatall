@@ -215,8 +215,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                 ),
                 const SizedBox(height: 24),
                 CustomTextField(
-                  label: 'اسم المستخدم',
-                  hint: 'أدخل اسم المستخدم',
+                  label: 'الاسم الثلاثي',
+                  hint: 'أدخل الاسم الثلاثي كاملاً',
                   controller: _userNameController,
                   prefixIcon: const Icon(Icons.person),
                   validator: Validators.username,

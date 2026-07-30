@@ -30,31 +30,34 @@ class ApiService {
     // Get the base URL directly from storage for initial setup
     final baseUrl = await _getCurrentBaseUrlFromStorage();
     _currentBaseUrl = baseUrl; // Store it for reference
+    debugPrint('🌐 [ApiService] baseUrl = $baseUrl');
 
-    _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: Duration(seconds: AppConstants.connectionTimeout),
-      receiveTimeout: Duration(seconds: AppConstants.receiveTimeout),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Tenant-ID': AppConstants.tenantId,
-      },
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: Duration(seconds: AppConstants.connectionTimeout),
+        receiveTimeout: Duration(seconds: AppConstants.receiveTimeout),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant-ID': AppConstants.tenantId,
+        },
+      ),
+    );
 
-    if (kDebugMode) {
-      _dio.interceptors.add(
-        LogInterceptor(
-          request: true,
-          requestHeader: true,
-          requestBody: true,
-          responseHeader: true,
-          responseBody: true,
-          error: true,
-          logPrint: (obj) => debugPrint(obj.toString(), wrapWidth: 2048),
-        ),
-      );
-    }
+    // if (kDebugMode) {
+    //   _dio.interceptors.add(
+    //     LogInterceptor(
+    //       request: true,
+    //       requestHeader: true,
+    //       requestBody: true,
+    //       responseHeader: true,
+    //       responseBody: true,
+    //       error: true,
+    //       log: (obj) => debugPrint(obj.toString(), wrapWidth: 2048),
+    //     ),
+    //   );
+    // }
 
     _setupInterceptors();
   }
@@ -64,30 +67,32 @@ class ApiService {
     // The most recent one is stored in _currentBaseUrl, otherwise get from config manager
     final baseUrl = _currentBaseUrl ?? _getBaseUrl();
 
-    _dio = Dio(BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: Duration(seconds: AppConstants.connectionTimeout),
-      receiveTimeout: Duration(seconds: AppConstants.receiveTimeout),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Tenant-ID': AppConstants.tenantId,
-      },
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: baseUrl,
+        connectTimeout: Duration(seconds: AppConstants.connectionTimeout),
+        receiveTimeout: Duration(seconds: AppConstants.receiveTimeout),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant-ID': AppConstants.tenantId,
+        },
+      ),
+    );
 
-    if (kDebugMode) {
-      _dio.interceptors.add(
-        LogInterceptor(
-          request: true,
-          requestHeader: true,
-          requestBody: true,
-          responseHeader: true,
-          responseBody: true,
-          error: true,
-          logPrint: (obj) => debugPrint(obj.toString(), wrapWidth: 2048),
-        ),
-      );
-    }
+    // if (kDebugMode) {
+    //   _dio.interceptors.add(
+    //     LogInterceptor(
+    //       request: true,
+    //       requestHeader: true,
+    //       requestBody: true,
+    //       responseHeader: true,
+    //       responseBody: true,
+    //       error: true,
+    //       log: (obj) => debug(obj.toString(), wrapWidth: 2048),
+    //     ),
+    //   );
+    // }
 
     _setupInterceptors();
   }
@@ -147,76 +152,78 @@ class ApiService {
             options.headers['Authorization'] = 'Bearer $token';
           }
 
-          // Print the request with token information
+          //  the request with token information
           // if (kDebugMode) {
-          //   print('=== REQUEST ===');
-          //   print('Method: ${options.method}');
-          //   print('URL: ${options.uri}');
-          //   print('Headers: ${options.headers}');
+          //   ('=== REQUEST ===');
+          //   ('Method: ${options.method}');
+          //   ('URL: ${options.uri}');
+          //   ('Headers: ${options.headers}');
           //   if (options.queryParameters.isNotEmpty) {
-          //     print('Query: ${options.queryParameters}');
+          //     ('Query: ${options.queryParameters}');
           //   }
           //   if (options.data is FormData) {
-          //     print(
+          //     (
           //         'Data: FormData with ${(options.data as FormData).fields.length} fields and ${(options.data as FormData).files.length} files');
           //     for (var field in (options.data as FormData).fields) {
-          //       print('Field: ${field.key} = ${field.value}');
+          //       ('Field: ${field.key} = ${field.value}');
           //     }
           //     for (var file in (options.data as FormData).files) {
-          //       print('File: ${file.key} = ${file.value.filename}');
+          //       ('File: ${file.key} = ${file.value.filename}');
           //     }
           //   } else {
-          //     print('Data: ${options.data}');
+          //     ('Data: ${options.data}');
           //   }
-          //   print('================');
+          //   ('================');
           // }
 
           handler.next(options);
         },
         onResponse: (response, handler) {
-          // Print the response
+          //  the response
           if (kDebugMode) {
-            // print('=== RESPONSE ===');
-            // print('Method: ${response.requestOptions.method}');
-            // print('URL: ${response.requestOptions.path}');
-            // print('Status Code: ${response.statusCode}');
-            // print('Headers: ${response.headers}');
-            // print('Data: ${response.data}');
-            // print('================');
+            // ('=== RESPONSE ===');
+            // ('Method: ${response.requestOptions.method}');
+            // ('URL: ${response.requestOptions.path}');
+            // ('Status Code: ${response.statusCode}');
+            // ('Headers: ${response.headers}');
+            // ('Data: ${response.data}');
+            // ('================');
           }
           handler.next(response);
         },
         onError: (error, handler) async {
-          // Print the error
+          //  the error
           if (kDebugMode) {
-            // print('=== ERROR ===');
-            // print('Method: ${error.requestOptions.method}');
-            // print('URL: ${error.requestOptions.path}');
-            // print('Status Code: ${error.response?.statusCode}');
-            // print('Message: ${error.message}');
-            // print('Data: ${error.response?.data}');
-            // print('================');
+            // ('=== ERROR ===');
+            // ('Method: ${error.requestOptions.method}');
+            // ('URL: ${error.requestOptions.path}');
+            // ('Status Code: ${error.response?.statusCode}');
+            // ('Message: ${error.message}');
+            // ('Data: ${error.response?.data}');
+            // ('================');
           }
 
           if (error.response?.statusCode == 401) {
             // Check if this is a refresh token request itself to avoid infinite loop
-            if (error.requestOptions.path
-                .contains(AppConstants.refreshTokenEndpoint)) {
+            if (error.requestOptions.path.contains(
+              AppConstants.refreshTokenEndpoint,
+            )) {
               // If the refresh token endpoint itself returns 401, clear tokens and navigate to login immediately
               await _storageService.clearAllTokens();
 
               // if (kDebugMode) {
-              //   print(
+              //   (
               //       '=== REFRESH TOKEN ENDPOINT FAILED - REDIRECTING TO LOGIN ===');
-              //   print('Method: ${error.requestOptions.method}');
-              //   print('URL: ${error.requestOptions.path}');
-              //   print('================');
+              //   ('Method: ${error.requestOptions.method}');
+              //   ('URL: ${error.requestOptions.path}');
+              //   ('================');
               // }
 
               // Navigate to login screen
               if (navigatorKey.currentContext != null) {
-                Navigator.of(navigatorKey.currentContext!)
-                    .pushNamedAndRemoveUntil('/login', (route) => false);
+                Navigator.of(
+                  navigatorKey.currentContext!,
+                ).pushNamedAndRemoveUntil('/login', (route) => false);
               }
               return;
             }
@@ -244,52 +251,61 @@ class ApiService {
                   await _storageService.clearAllTokens();
 
                   // if (kDebugMode) {
-                  //   print(
+                  //   (
                   //       '=== RETRY STILL UNAUTHORIZED - REDIRECTING TO LOGIN ===');
-                  //   print('Method: ${response.requestOptions.method}');
-                  //   print('URL: ${response.requestOptions.path}');
-                  //   print('Status Code: ${response.statusCode}');
-                  //   print('================');
+                  //   ('Method: ${response.requestOptions.method}');
+                  //   ('URL: ${response.requestOptions.path}');
+                  //   ('Status Code: ${response.statusCode}');
+                  //   ('================');
                   // }
 
                   // Navigate to login screen
                   if (navigatorKey.currentContext != null) {
-                    Navigator.of(navigatorKey.currentContext!)
-                        .pushNamedAndRemoveUntil('/login', (route) => false);
+                    Navigator.of(
+                      navigatorKey.currentContext!,
+                    ).pushNamedAndRemoveUntil('/login', (route) => false);
                   }
                   return;
                 }
 
-                // // Print the retry response
+                // //  the retry response
                 // if (kDebugMode) {
-                //   print('=== RETRY RESPONSE (after token refresh) ===');
-                //   print('Method: ${response.requestOptions.method}');
-                //   print('URL: ${response.requestOptions.path}');
-                //   print('Status Code: ${response.statusCode}');
-                //   print('Headers: ${response.headers}');
-                //   print('Data: ${response.data}');
-                //   print('================');
+                //   ('=== RETRY RESPONSE (after token refresh) ===');
+                //   ('Method: ${response.requestOptions.method}');
+                //   ('URL: ${response.requestOptions.path}');
+                //   ('Status Code: ${response.statusCode}');
+                //   ('Headers: ${response.headers}');
+                //   ('Data: ${response.data}');
+                //   ('================');
                 // }
 
                 handler.resolve(response);
                 return;
-              } catch (e) {
-                // If retry fails, clear tokens and navigate to login
-                if (kDebugMode) {
-                  print('=== RETRY FAILED - REDIRECTING TO LOGIN ===');
-                  print('Method: ${error.requestOptions.method}');
-                  print('URL: ${error.requestOptions.path}');
-                  print('Error: $e');
-                  print('================');
+              } on DioException catch (retryError) {
+                // Only treat this as an auth failure (and force logout) if the
+                // retried request is itself unauthorized. Any other failure
+                // (validation, server error, etc.) is a real error from the
+                // retried request and must be surfaced to the caller as-is,
+                // not swallowed behind a forced logout.
+                if (retryError.response?.statusCode == 401) {
+                  if (kDebugMode) {
+                    ('=== RETRY STILL UNAUTHORIZED - REDIRECTING TO LOGIN ===');
+                    ('Method: ${error.requestOptions.method}');
+                    ('URL: ${error.requestOptions.path}');
+                    ('================');
+                  }
+
+                  await _storageService.clearAllTokens();
+
+                  if (navigatorKey.currentContext != null) {
+                    Navigator.of(
+                      navigatorKey.currentContext!,
+                    ).pushNamedAndRemoveUntil('/login', (route) => false);
+                  }
+                  return;
                 }
 
-                await _storageService.clearAllTokens();
-
-                // Navigate to login screen
-                if (navigatorKey.currentContext != null) {
-                  Navigator.of(navigatorKey.currentContext!)
-                      .pushNamedAndRemoveUntil('/login', (route) => false);
-                }
+                handler.next(retryError);
                 return;
               }
             } else {
@@ -297,16 +313,17 @@ class ApiService {
               await _storageService.clearAllTokens();
 
               if (kDebugMode) {
-                print('=== REFRESH TOKEN INVALID - REDIRECTING TO LOGIN ===');
-                print('Method: ${error.requestOptions.method}');
-                print('URL: ${error.requestOptions.path}');
-                print('================');
+                ('=== REFRESH TOKEN INVALID - REDIRECTING TO LOGIN ===');
+                ('Method: ${error.requestOptions.method}');
+                ('URL: ${error.requestOptions.path}');
+                ('================');
               }
 
               // Navigate to login screen
               if (navigatorKey.currentContext != null) {
-                Navigator.of(navigatorKey.currentContext!)
-                    .pushNamedAndRemoveUntil('/login', (route) => false);
+                Navigator.of(
+                  navigatorKey.currentContext!,
+                ).pushNamedAndRemoveUntil('/login', (route) => false);
               }
             }
           }
@@ -323,32 +340,30 @@ class ApiService {
       if (refreshToken == null) return false;
 
       // if (kDebugMode) {
-      //   print('=== REFRESH TOKEN REQUEST ===');
-      //   print('Method: POST');
-      //   print('URL: ${AppConstants.refreshTokenEndpoint}');
-      //   print('Data: {type: user, refreshToken: $refreshToken}');
-      //   print('================');
+      //   ('=== REFRESH TOKEN REQUEST ===');
+      //   ('Method: POST');
+      //   ('URL: ${AppConstants.refreshTokenEndpoint}');
+      //   ('Data: {type: user, refreshToken: $refreshToken}');
+      //   ('================');
       // }
 
       final response = await _dio.post(
         AppConstants.refreshTokenEndpoint,
-        data: {
-          'type': 'user',
-          'refreshToken': refreshToken,
-        },
+        data: {'type': 'user', 'refreshToken': refreshToken},
       );
 
       // if (kDebugMode) {
-      //   print('=== REFRESH TOKEN RESPONSE ===');
-      //   print('Method: POST');
-      //   print('URL: ${AppConstants.refreshTokenEndpoint}');
-      //   print('Status Code: ${response.statusCode}');
-      //   print('Data: ${response.data}');
-      //   print('================');
+      //   ('=== REFRESH TOKEN RESPONSE ===');
+      //   ('Method: POST');
+      //   ('URL: ${AppConstants.refreshTokenEndpoint}');
+      //   ('Status Code: ${response.statusCode}');
+      //   ('Data: ${response.data}');
+      //   ('================');
       // }
 
       if (response.statusCode == 200) {
-        final newAccessToken = response.data['data']?['accessToken'] ??
+        final newAccessToken =
+            response.data['data']?['accessToken'] ??
             response.data['data']?['token'];
         final newRefreshToken = response.data['data']?['refreshToken'];
 
@@ -363,11 +378,11 @@ class ApiService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('=== REFRESH TOKEN ERROR ===');
-        print('Method: POST');
-        print('URL: ${AppConstants.refreshTokenEndpoint}');
-        print('Error: $e');
-        print('================');
+        ('=== REFRESH TOKEN ERROR ===');
+        ('Method: POST');
+        ('URL: ${AppConstants.refreshTokenEndpoint}');
+        ('Error: $e');
+        ('================');
         debugPrint('Token refresh failed: $e');
       }
     }
@@ -467,10 +482,9 @@ class ApiService {
       final formData = FormData();
 
       // Add file
-      formData.files.add(MapEntry(
-        fieldName,
-        await MultipartFile.fromFile(file.path),
-      ));
+      formData.files.add(
+        MapEntry(fieldName, await MultipartFile.fromFile(file.path)),
+      );
 
       // Add other data
       if (data != null) {
@@ -483,13 +497,23 @@ class ApiService {
         endpoint,
         data: formData,
         onSendProgress: onSendProgress,
-        options: Options(
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        ),
+        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
       );
 
+      return ApiResponse.fromResponse(response);
+    } on DioException catch (e) {
+      return ApiResponse.fromError(e);
+    } catch (e) {
+      return ApiResponse.fromException(e);
+    }
+  }
+
+  Future<ApiResponse<dynamic>> getAnnouncements({int page = 1}) async {
+    try {
+      final response = await _dio.get(
+        '/announcements/public',
+        queryParameters: {'page': page.toString(), 'limit': '20', 'audience': 'user'},
+      );
       return ApiResponse.fromResponse(response);
     } on DioException catch (e) {
       return ApiResponse.fromError(e);
@@ -518,6 +542,7 @@ class ApiResponse<T> {
   final T? data;
   final String? message;
   final String? error;
+  final String? errorCode;
   final int? statusCode;
 
   ApiResponse({
@@ -525,6 +550,7 @@ class ApiResponse<T> {
     this.data,
     this.message,
     this.error,
+    this.errorCode,
     this.statusCode,
   });
 
@@ -536,6 +562,7 @@ class ApiResponse<T> {
         success: responseData['success'] ?? true,
         data: responseData['data'],
         message: responseData['message'],
+        errorCode: responseData['errorCode']?.toString(),
         statusCode: response.statusCode,
       );
     }
@@ -548,7 +575,9 @@ class ApiResponse<T> {
   }
 
   factory ApiResponse.fromError(DioException error) {
-    String errorMessage = 'حدث خطأ غير متوقع '+'(DioException): ${error.message}';
+    String errorMessage =
+        'حدث خطأ غير متوقع ' + '(DioException): ${error.message}';
+    String? errorCode;
 
     if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout) {
@@ -565,15 +594,18 @@ class ApiResponse<T> {
             .where((m) => m.isNotEmpty)
             .join('\n');
       } else {
-        errorMessage = responseData['error']?.toString() ??
+        errorMessage =
+            responseData['error']?.toString() ??
             responseData['message']?.toString() ??
             errorMessage;
       }
+      errorCode = responseData['errorCode']?.toString();
     }
 
     return ApiResponse(
       success: false,
       error: errorMessage,
+      errorCode: errorCode,
       statusCode: error.response?.statusCode,
     );
   }

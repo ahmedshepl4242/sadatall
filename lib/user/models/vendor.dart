@@ -35,18 +35,18 @@ class Vendor {
 		// Parse categories if present
 		List<Category> categoriesList = [];
 		if (json['categories'] != null && json['categories'] is List) {
-			print('🟣 [Vendor.fromJson] Parsing categories for vendor: ${json['vendorName']}');
-			print('🟣 [Vendor.fromJson] Categories data: ${json['categories']}');
+			('🟣 [Vendor.fromJson] Parsing categories for vendor: ${json['vendorName']}');
+			('🟣 [Vendor.fromJson] Categories data: ${json['categories']}');
 			categoriesList = (json['categories'] as List)
 					.map((categoryJson) {
 						final category = Category.fromJson(categoryJson as Map<String, dynamic>);
-						print('🟣 [Vendor.fromJson] Parsed category: id=${category.id}, name=${category.name}');
+						('🟣 [Vendor.fromJson] Parsed category: id=${category.id}, name=${category.name}');
 						return category;
 					})
 					.toList();
-			print('🟣 [Vendor.fromJson] Total categories parsed: ${categoriesList.length}');
+			('🟣 [Vendor.fromJson] Total categories parsed: ${categoriesList.length}');
 		} else {
-			print('🟣 [Vendor.fromJson] No categories for vendor: ${json['vendorName']}');
+			('🟣 [Vendor.fromJson] No categories for vendor: ${json['vendorName']}');
 		}
 
 		return Vendor(

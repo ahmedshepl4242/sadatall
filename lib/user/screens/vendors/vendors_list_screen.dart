@@ -93,7 +93,7 @@ class _VendorsListScreenState extends State<VendorsListScreen> {
   }
 
   Future<void> _loadCategories() async {
-    print('🟢 [VendorsListScreen] Loading categories...');
+    ('🟢 [VendorsListScreen] Loading categories...');
     setState(() {
       _isLoadingCategories = true;
     });
@@ -101,13 +101,13 @@ class _VendorsListScreenState extends State<VendorsListScreen> {
     try {
       final response = await _vendorService.getCategories();
 
-      print('🟢 [VendorsListScreen] Categories response success: ${response.success}');
-      print('🟢 [VendorsListScreen] Categories data: ${response.data}');
+      ('🟢 [VendorsListScreen] Categories response success: ${response.success}');
+      ('🟢 [VendorsListScreen] Categories data: ${response.data}');
 
       if (response.success && response.data != null) {
-        print('🟢 [VendorsListScreen] Categories count: ${response.data!.length}');
+        ('🟢 [VendorsListScreen] Categories count: ${response.data!.length}');
         for (var category in response.data!) {
-          print('🟢 [VendorsListScreen] Category received: id=${category.id}, name=${category.name}');
+          ('🟢 [VendorsListScreen] Category received: id=${category.id}, name=${category.name}');
         }
 
         setState(() {
@@ -115,15 +115,15 @@ class _VendorsListScreenState extends State<VendorsListScreen> {
           _isLoadingCategories = false;
         });
 
-        print('🟢 [VendorsListScreen] State updated with ${_categories.length} categories');
+        ('🟢 [VendorsListScreen] State updated with ${_categories.length} categories');
       } else {
-        print('🔴 [VendorsListScreen] Categories load failed: ${response.error}');
+        ('🔴 [VendorsListScreen] Categories load failed: ${response.error}');
         setState(() {
           _isLoadingCategories = false;
         });
       }
     } catch (e) {
-      print('🔴 [VendorsListScreen] Exception loading categories: $e');
+      ('🔴 [VendorsListScreen] Exception loading categories: $e');
       setState(() {
         _isLoadingCategories = false;
       });
@@ -344,8 +344,8 @@ class _VendorsListScreenState extends State<VendorsListScreen> {
                   child: DropdownButtonHideUnderline(
                     child: Builder(
                       builder: (context) {
-                        print('🟡 [VendorsListScreen] Building dropdown with ${_categories.length} categories');
-                        print('🟡 [VendorsListScreen] Selected category ID: $_selectedCategoryId');
+                        ('🟡 [VendorsListScreen] Building dropdown with ${_categories.length} categories');
+                        ('🟡 [VendorsListScreen] Selected category ID: $_selectedCategoryId');
 
                         return DropdownButton<String>(
                           value: _selectedCategoryId,
@@ -358,7 +358,7 @@ class _VendorsListScreenState extends State<VendorsListScreen> {
                               child: Text('جميع الفئات'),
                             ),
                             ..._categories.map((category) {
-                              print('🟡 [VendorsListScreen] Creating dropdown item: id=${category.id}, name=${category.name}');
+                              ('🟡 [VendorsListScreen] Creating dropdown item: id=${category.id}, name=${category.name}');
                               return DropdownMenuItem<String>(
                                 value: category.id,
                                 child: Text(category.name),
@@ -366,7 +366,7 @@ class _VendorsListScreenState extends State<VendorsListScreen> {
                             }).toList(),
                           ],
                           onChanged: (String? newValue) {
-                            print('🟡 [VendorsListScreen] Category selected: $newValue');
+                            ('🟡 [VendorsListScreen] Category selected: $newValue');
                             setState(() {
                               _selectedCategoryId = newValue;
                               _currentPage = 1;
@@ -506,152 +506,85 @@ class _VendorsListScreenState extends State<VendorsListScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      color: const Color(0xFFFFCC80), // Light orange (Orange 100)
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: isOpen ? () => _navigateToVendorDetails(vendor) : null,
         borderRadius: BorderRadius.circular(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
           children: [
-            // Vendor Image
-            Container(
-              height: 180,
-              width: double.infinity,
-              decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
-                color: Colors.grey[200],
-              ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(12),
-                ),
+            ClipRRect(
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+              child: SizedBox(
+                width: 100,
+                height: 100,
                 child: vendor.imageUrl != null
-                    ? SmartImage(
-                        imageSource: vendor.imageUrl!,
-                        fit: BoxFit.cover,
-                      )
+                    ? SmartImage(imageSource: vendor.imageUrl!, fit: BoxFit.cover)
                     : Container(
                         color: Colors.grey[300],
-                        child: Icon(
-                          Icons.store,
-                          size: 48,
-                          color: Colors.grey[500],
-                        ),
+                        child: Icon(Icons.store, size: 32, color: Colors.grey[500]),
                       ),
               ),
             ),
-
-            // Vendor Info
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          vendor.vendorName,
-                          style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      // Status Indicator
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isOpen
-                              ? AppTheme.successColor.withOpacity(0.8) // Lighter green background
-                              : Colors.grey.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          isOpen ? 'مفتوح' : 'مغلق',
-                          style: TextStyle(
-                            color: isOpen ? Colors.white : Colors.grey, // White text for better contrast
-                            fontSize: 12,
-                            fontWeight: FontWeight.normal, // Thinner font
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            vendor.vendorName,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  // Categories tags
-                  if (vendor.categories.isNotEmpty) ...[
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: vendor.categories.map((category) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 4,
-                          ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                           decoration: BoxDecoration(
-                            color: AppTheme.successColor.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppTheme.successColor.withOpacity(0.5),
-                            ),
+                            color: isOpen
+                                ? AppTheme.successColor.withOpacity(0.15)
+                                : Colors.grey.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
                           ),
                           child: Text(
-                            category.name,
+                            isOpen ? 'مفتوح' : 'مغلق',
                             style: TextStyle(
+                              color: isOpen ? AppTheme.successColor : Colors.grey[600],
                               fontSize: 11,
-                              color: AppTheme.successColor.withOpacity(0.9),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                        );
-                      }).toList(),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  if (vendor.description.isNotEmpty) ...[
-                    Text(
-                      vendor.description,
-                      style: const TextStyle(
-                        color: AppTheme.textSecondary,
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 16,
-                        color: AppTheme.textSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          vendor.address,
-                          style: const TextStyle(
-                            color: AppTheme.textSecondary,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    if (vendor.categories.isNotEmpty)
+                      Text(
+                        vendor.categories.map((c) => c.name).join(' • '),
+                        style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textSecondary),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            vendor.address,
+                            style: TextStyle(fontSize: 12, color: AppTheme.textSecondary),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -664,32 +597,27 @@ class _VendorsListScreenState extends State<VendorsListScreen> {
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Row(
         children: [
           SkeletonWidget(
-            height: 180,
-            width: double.infinity,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(12),
-            ),
+            width: 100,
+            height: 100,
+            borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SkeletonWidget(height: 20, width: 150),
-                const SizedBox(height: 8),
-                const SkeletonWidget(height: 14, width: double.infinity),
-                const SizedBox(height: 4),
-                const SkeletonWidget(height: 14, width: 200),
-                const SizedBox(height: 8),
-                const SkeletonWidget(height: 12, width: 120),
-              ],
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SkeletonWidget(height: 16, width: 120),
+                  const SizedBox(height: 8),
+                  const SkeletonWidget(height: 12, width: 160),
+                  const SizedBox(height: 8),
+                  const SkeletonWidget(height: 12, width: 100),
+                ],
+              ),
             ),
           ),
         ],

@@ -2,11 +2,23 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../navigator_key.dart'; // Import the global navigator key
+import 'package:sadat_delivery_merged/main.dart' show navigatorKey;
+import 'package:sadat_delivery_merged/vendor/screens/orders/order_details_screen.dart';
 import 'dart:convert';
 import 'order_service.dart';
 import 'auth_service.dart';
 import '../utils/time_utils.dart';
+
+const Set<String> _kOrderNotificationTypes = {
+  'NEW_ORDER',
+  'ORDER_APPROVED',
+  'DELIVERY_AVAILABLE',
+  'CAPTAIN_ASSIGNED',
+  'ORDER_CANCELLED',
+  'ORDER_DELIVERED',
+  'CAPTAIN_ARRIVED',
+  'NEW_VENDOR_ORDER',
+};
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -203,94 +215,39 @@ class NotificationService {
   }
 
   void _handleNotificationNavigation(Map<String, dynamic> data) {
-    final type = data['type'];
-    final orderId = data['orderId'];
+    final type = data['type'] as String?;
+    final orderId = data['orderId'] as String?;
 
-    if (kDebugMode) {}
+    if (orderId != null && (type == null || _kOrderNotificationTypes.contains(type))) {
+      final navState = navigatorKey.currentState;
+      if (navState != null) {
+        navState.push(
+          MaterialPageRoute(
+            builder: (_) => _VendorOrderLoadingScreen(orderId: orderId),
+          ),
+        );
+      }
+      return;
+    }
 
-    switch (type) {
-      case 'new_order':
-      case 'order_update':
-        if (orderId != null) {
-          // Navigate to order details using the global navigator key
-          if (navigatorKey.currentContext != null) {
-            try {
-              // Navigate to main screen first, then navigate to order details
-              navigatorKey.currentState
-                  ?.pushNamedAndRemoveUntil('/main', (route) => route.isFirst);
-
-              // Show a snackbar indicating we're loading the order
-              if (navigatorKey.currentContext != null) {
-                ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
-                  const SnackBar(
-                    content: Text('جاري تحميل تفاصيل الطلب...'),
-                    duration: Duration(seconds: 2),
-                  ),
-                );
-              }
-
-              // We'll need to fetch the order and then navigate to its details
-              // For now, we'll show a message to the user to check the orders section
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (navigatorKey.currentContext != null) {
-                  ScaffoldMessenger.of(navigatorKey.currentContext!)
-                      .showSnackBar(
-                    SnackBar(
-                      content: const Text(
-                          'طلب جديد تم استلامه - يرجى التحقق من قسم الطلبات'),
-                      duration: const Duration(seconds: 5),
-                    ),
-                  );
-                }
-              });
-            } catch (e) {
-              if (kDebugMode) {}
-
-              // Fallback: show dialog
-              if (navigatorKey.currentContext != null) {
-                showDialog(
-                  context: navigatorKey.currentContext!,
-                  barrierDismissible: true,
-                  builder: (BuildContext context) {
-                    return AlertDialog(
-                      title: const Text('طلب جديد'),
-                      content: const Text(
-                          'لقد استلمت طلباً جديداً - يرجى التحقق من قسم الطلبات في التطبيق'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('موافق'),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              }
-            }
-          }
-        }
-        break;
-      default:
-        if (kDebugMode) {}
-        // Show a generic dialog for unknown notification types
-        if (navigatorKey.currentContext != null) {
-          showDialog(
-            context: navigatorKey.currentContext!,
-            barrierDismissible: true,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('تنبيه جديد'),
-                content: const Text('لديك تنبيه جديد من النظام'),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Text('موافق'),
-                  ),
-                ],
-              );
-            },
+    // Show a generic dialog for unknown/non-order notification types
+    if (navigatorKey.currentContext != null) {
+      showDialog(
+        context: navigatorKey.currentContext!,
+        barrierDismissible: true,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: const Text('تنبيه جديد'),
+            content: const Text('لديك تنبيه جديد من النظام'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('موافق'),
+              ),
+            ],
           );
-        }
+        },
+      );
     }
   }
 
@@ -433,5 +390,49 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
     }
   } catch (e) {
     if (kDebugMode) {}
+  }
+}
+
+/// Lightweight screen shown immediately on notification tap while the full
+/// order is fetched, then replaced with the real order details screen.
+class _VendorOrderLoadingScreen extends StatefulWidget {
+  final String orderId;
+  const _VendorOrderLoadingScreen({required this.orderId});
+
+  @override
+  State<_VendorOrderLoadingScreen> createState() =>
+      _VendorOrderLoadingScreenState();
+}
+
+class _VendorOrderLoadingScreenState extends State<_VendorOrderLoadingScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
+  }
+
+  Future<void> _load() async {
+    final response = await OrderService().getOrderById(widget.orderId);
+    if (!mounted) return;
+
+    if (response.success && response.data != null) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => OrderDetailsScreen(order: response.data!),
+        ),
+      );
+    } else {
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(response.error ?? 'تعذر تحميل الطلب')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
   }
 }

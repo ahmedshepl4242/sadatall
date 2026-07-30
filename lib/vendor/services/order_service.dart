@@ -13,6 +13,45 @@ class OrderService {
   final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
 
+  Future<ApiResponse<Order>> getOrderById(String orderId) async {
+    try {
+      final token = await _authService.getAccessToken();
+      if (token == null) {
+        return ApiResponse<Order>(success: false, error: 'غير مصرح للوصول');
+      }
+
+      final response = await _apiService.get<Map<String, dynamic>>(
+        '/orders/$orderId',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.success && response.data != null) {
+        final orderJson = response.data is Map<String, dynamic> &&
+                response.data!.containsKey('data')
+            ? response.data!['data'] as Map<String, dynamic>?
+            : response.data!;
+
+        if (orderJson != null) {
+          return ApiResponse<Order>(
+            success: true,
+            data: Order.fromJson(orderJson),
+            message: response.message ?? 'تم استرداد الطلب بنجاح',
+          );
+        }
+      }
+      return ApiResponse<Order>(
+        success: false,
+        error: response.error ?? 'فشل في استرداد الطلب',
+      );
+    } catch (e) {
+      if (kDebugMode) {}
+      return ApiResponse<Order>(
+        success: false,
+        error: 'حدث خطأ أثناء استرداد الطلب: ${e.toString()}',
+      );
+    }
+  }
+
   Future<ApiResponse<List<Order>>> getVendorOrders({
     int page = 1,
     int limit = 10,
@@ -87,6 +126,7 @@ class OrderService {
     required String phoneNumber,
     required int neighborhoodId,
     double? price,
+    int? waitingTime,
   }) async {
     try {
       final token = await _authService.getAccessToken();
@@ -110,6 +150,10 @@ class OrderService {
 
       if (price != null) {
         requestData['price'] = price;
+      }
+
+      if (waitingTime != null) {
+        requestData['waitingTime'] = waitingTime;
       }
 
       if (kDebugMode) {}
@@ -220,6 +264,56 @@ class OrderService {
       return ApiResponse<Order>(
         success: false,
         error: 'حدث خطأ أثناء إرسال العرض: ${e.toString()}',
+      );
+    }
+  }
+
+  Future<ApiResponse<Order>> acceptOrder(int orderId) async {
+    try {
+      final token = await _authService.getAccessToken();
+      if (token == null) {
+        return ApiResponse<Order>(
+          success: false,
+          error: 'غير مصرح للوصول',
+        );
+      }
+
+      final response = await _apiService.put<Map<String, dynamic>>(
+        '${AppConstants.ordersEndpoint}/$orderId/vendor-accept',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.success && response.data != null) {
+        // Extract order data from nested structure according to schema
+        final orderData = response.data is Map<String, dynamic> &&
+                response.data!.containsKey('data')
+            ? response.data!['data'] as Map<String, dynamic>?
+            : response.data!;
+
+        if (orderData != null) {
+          final order = Order.fromJson(orderData);
+          return ApiResponse<Order>(
+            success: true,
+            data: order,
+            message: response.message ?? 'تم قبول الطلب بنجاح',
+          );
+        } else {
+          return ApiResponse<Order>(
+            success: false,
+            error: 'بيانات الطلب غير صحيحة في الرد',
+          );
+        }
+      } else {
+        return ApiResponse<Order>(
+          success: false,
+          error: response.error ?? 'فشل في قبول الطلب',
+        );
+      }
+    } catch (e) {
+      if (kDebugMode) {}
+      return ApiResponse<Order>(
+        success: false,
+        error: 'حدث خطأ أثناء قبول الطلب: ${e.toString()}',
       );
     }
   }

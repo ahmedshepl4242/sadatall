@@ -70,7 +70,7 @@ class ConfigService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error fetching base URL from Firestore: $e');
+        ('Error fetching base URL from Firestore: $e');
       }
       rethrow;
     }
@@ -91,7 +91,7 @@ class ConfigService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error fetching config value for key $key from Firestore: $e');
+        ('Error fetching config value for key $key from Firestore: $e');
       }
       // Don't rethrow here since this is a utility method that might be used in various contexts
     }

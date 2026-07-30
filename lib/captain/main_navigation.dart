@@ -9,6 +9,10 @@ import 'features/orders/presentation/screens/delivered_orders_screen.dart';
 import 'features/profile/presentation/screens/profile_screen.dart';
 import 'features/requests/presentation/screens/create_request_screen.dart';
 import 'features/requests/presentation/screens/requests_list_screen.dart';
+import 'features/announcements/presentation/screens/offers_screen.dart';
+
+final switchToCurrentOrderTab = StateProvider<VoidCallback?>((ref) => null);
+final switchToAvailableOrdersTab = StateProvider<VoidCallback?>((ref) => null);
 
 class MainNavigation extends ConsumerStatefulWidget {
   const MainNavigation({Key? key}) : super(key: key);
@@ -20,6 +24,19 @@ class MainNavigation extends ConsumerStatefulWidget {
 class _MainNavigationState extends ConsumerState<MainNavigation> {
   int _currentIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(switchToCurrentOrderTab.notifier).state = () {
+        if (mounted) setState(() => _currentIndex = 0);
+      };
+      ref.read(switchToAvailableOrdersTab.notifier).state = () {
+        if (mounted) setState(() => _currentIndex = 1);
+      };
+    });
+  }
 
   final List<Widget> _screens = [
     const CurrentOrderScreen(),
@@ -185,6 +202,18 @@ class _MainNavigationState extends ConsumerState<MainNavigation> {
               Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => const RequestsListScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.campaign_outlined),
+            title: const Text('عروض وأخبار'),
+            onTap: () {
+              Navigator.of(context).pop();
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const CaptainOffersScreen(),
                 ),
               );
             },

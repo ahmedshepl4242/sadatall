@@ -153,12 +153,12 @@ class _SignupScreenState extends State<SignupScreen> {
 
                 // User Name
                 CustomTextField(
-                  label: 'اسم المستخدم',
-                  hint: 'أدخل اسم المستخدم',
+                  label: 'الاسم الثلاثي',
+                  hint: 'أدخل الاسم الثلاثي كاملاً',
                   controller: _userNameController,
                   prefixIcon: Icons.person,
                   validator: (value) =>
-                      Validators.validateName(value, fieldName: 'اسم المستخدم'),
+                      Validators.validateName(value, fieldName: 'الاسم الثلاثي'),
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 16),

@@ -91,7 +91,13 @@ class Validators {
     if (value.trim().length > AppConstants.maxNameLength) {
       return '$field يجب أن يكون ${AppConstants.maxNameLength} حرف على الأكثر';
     }
-    
+
+    final parts =
+        value.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+    if (parts.length < 3) {
+      return 'يرجى إدخال الاسم الثلاثي كاملاً';
+    }
+
     return null;
   }
 

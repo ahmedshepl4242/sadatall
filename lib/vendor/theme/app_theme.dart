@@ -2,23 +2,31 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
-  static const Color primaryColor = Color(0xFFFFC107);
-  static const Color primaryVariant = Color(0xFFFF8F00);
-  static const Color secondaryColor = Color(0xFFFFEB3B);
-  static const Color secondaryVariant = Color(0xFFFFC107);
-  static const Color surfaceColor = Color(0xFFFFFDE7);
-  static const Color backgroundColor = Color(0xFFFFFDE7);
+  static const Color primaryColor = Color(0xFF00BFA5);
+  static const Color primaryVariant = Color(0xFF007B6E);
+  static const Color secondaryColor = Color(0xFF2A2A2A);
+  static const Color secondaryVariant = Color(0xFF1A1A1A);
+  static const Color surfaceColor = Color(0xFFFFFFFF);
+  static const Color backgroundColor = Color(0xFFE8F8F6);
   static const Color errorColor = Color(0xFFD32F2F);
   static const Color successColor = Color(0xFF388E3C);
   static const Color warningColor = Color(0xFFF57C00);
   static const Color infoColor = Color(0xFF1976D2);
 
-  static const Color textPrimary = Color(0xFF5D4037);
-  static const Color textSecondary = Color(0xFF8D6E63);
-  static const Color textDisabled = Color(0xFFBCAAA4);
+  static const Color textPrimary = Color(0xFF1A1A1A);
+  static const Color textSecondary = Color(0xFF4A4A4A);
+  static const Color textDisabled = Color(0xFF9E9E9E);
 
-  static const Color borderColor = Color(0xFFE0E0E0);
-  static const Color dividerColor = Color(0xFFEEEEEE);
+  static const Color borderColor = Color(0xFFCCECE9);
+  static const Color dividerColor = Color(0xFFDDF2F0);
+
+  static const Color darkSurfaceColor = Color(0xFF1E1E1E);
+  static const Color darkBackgroundColor = Color(0xFF121212);
+  static const Color darkTextPrimary = Color(0xFFECECEC);
+  static const Color darkTextSecondary = Color(0xFFB0B0B0);
+  static const Color darkTextDisabled = Color(0xFF6E6E6E);
+  static const Color darkBorderColor = Color(0xFF3A3A3A);
+  static const Color darkDividerColor = Color(0xFF2C2C2C);
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -48,82 +56,121 @@ class AppTheme {
     );
   }
 
-  static TextTheme _getTextTheme() {
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryColor,
+        brightness: Brightness.dark,
+        primary: primaryColor,
+        secondary: secondaryColor,
+        surface: darkSurfaceColor,
+        error: errorColor,
+      ),
+      textTheme: _getTextTheme(
+        primary: darkTextPrimary,
+        secondary: darkTextSecondary,
+      ),
+      appBarTheme: _getAppBarTheme(),
+      elevatedButtonTheme: _getElevatedButtonTheme(),
+      outlinedButtonTheme: _getOutlinedButtonTheme(),
+      textButtonTheme: _getTextButtonTheme(),
+      inputDecorationTheme: _getInputDecorationTheme(
+        fill: darkSurfaceColor,
+        border: darkBorderColor,
+        labelColor: darkTextSecondary,
+        hintColor: darkTextDisabled,
+      ),
+      dividerTheme: _getDividerTheme(darkDividerColor),
+      scaffoldBackgroundColor: darkBackgroundColor,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+      typography: Typography.material2021(platform: TargetPlatform.android),
+      iconTheme: const IconThemeData(
+        color: primaryColor,
+      ),
+    );
+  }
+
+  static TextTheme _getTextTheme({
+    Color primary = textPrimary,
+    Color secondary = textSecondary,
+  }) {
     return GoogleFonts.cairoTextTheme().copyWith(
       displayLarge: GoogleFonts.cairo(
         fontSize: 32,
         fontWeight: FontWeight.bold,
-        color: textPrimary,
+        color: primary,
       ),
       displayMedium: GoogleFonts.cairo(
         fontSize: 28,
         fontWeight: FontWeight.bold,
-        color: textPrimary,
+        color: primary,
       ),
       displaySmall: GoogleFonts.cairo(
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        color: textPrimary,
+        color: primary,
       ),
       headlineLarge: GoogleFonts.cairo(
         fontSize: 22,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       headlineMedium: GoogleFonts.cairo(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       headlineSmall: GoogleFonts.cairo(
         fontSize: 18,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       titleLarge: GoogleFonts.cairo(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       titleMedium: GoogleFonts.cairo(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       titleSmall: GoogleFonts.cairo(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       bodyLarge: GoogleFonts.cairo(
         fontSize: 16,
         fontWeight: FontWeight.normal,
-        color: textPrimary,
+        color: primary,
       ),
       bodyMedium: GoogleFonts.cairo(
         fontSize: 14,
         fontWeight: FontWeight.normal,
-        color: textPrimary,
+        color: primary,
       ),
       bodySmall: GoogleFonts.cairo(
         fontSize: 12,
         fontWeight: FontWeight.normal,
-        color: textSecondary,
+        color: secondary,
       ),
       labelLarge: GoogleFonts.cairo(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: textPrimary,
+        color: primary,
       ),
       labelMedium: GoogleFonts.cairo(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: textPrimary,
+        color: primary,
       ),
       labelSmall: GoogleFonts.cairo(
         fontSize: 10,
         fontWeight: FontWeight.w500,
-        color: textSecondary,
+        color: secondary,
       ),
     );
   }
@@ -131,13 +178,13 @@ class AppTheme {
   static AppBarTheme _getAppBarTheme() {
     return AppBarTheme(
       backgroundColor: primaryColor,
-      foregroundColor: textPrimary,
+      foregroundColor: Colors.white,
       elevation: 0,
       centerTitle: true,
       titleTextStyle: GoogleFonts.cairo(
         fontSize: 18,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: Colors.white,
       ),
     );
   }
@@ -146,7 +193,7 @@ class AppTheme {
     return ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
         backgroundColor: primaryColor,
-        foregroundColor: textPrimary,
+        foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -190,17 +237,22 @@ class AppTheme {
     );
   }
 
-  static InputDecorationTheme _getInputDecorationTheme() {
+  static InputDecorationTheme _getInputDecorationTheme({
+    Color fill = surfaceColor,
+    Color border = borderColor,
+    Color labelColor = textSecondary,
+    Color hintColor = textDisabled,
+  }) {
     return InputDecorationTheme(
       filled: true,
-      fillColor: surfaceColor,
+      fillColor: fill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderColor),
+        borderSide: BorderSide(color: border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderColor),
+        borderSide: BorderSide(color: border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -216,11 +268,11 @@ class AppTheme {
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       labelStyle: GoogleFonts.cairo(
-        color: textSecondary,
+        color: labelColor,
         fontSize: 14,
       ),
       hintStyle: GoogleFonts.cairo(
-        color: textDisabled,
+        color: hintColor,
         fontSize: 14,
       ),
       errorStyle: GoogleFonts.cairo(
@@ -242,9 +294,9 @@ class AppTheme {
     );
   }
 
-  static DividerThemeData _getDividerTheme() {
-    return const DividerThemeData(
-      color: dividerColor,
+  static DividerThemeData _getDividerTheme([Color color = dividerColor]) {
+    return DividerThemeData(
+      color: color,
       thickness: 1,
       space: 1,
     );

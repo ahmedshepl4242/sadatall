@@ -5,6 +5,7 @@ import '../orders/create_order_screen.dart';
 import '../items/items_management_screen.dart';
 import '../menu/menu_management_screen.dart';
 import '../settings/settings_screen.dart';
+import '../announcements/vendor_offers_screen.dart';
 import '../../services/notification_service.dart';
 
 class MainAppScreen extends StatefulWidget {
@@ -32,6 +33,7 @@ class _MainAppScreenState extends State<MainAppScreen> {
       const OrdersManagementScreen(),
       const ItemsManagementScreen(),
       const MenuManagementScreen(),
+      const VendorOffersScreen(),
       const SettingsScreen(),
     ];
 
@@ -55,6 +57,11 @@ class _MainAppScreenState extends State<MainAppScreen> {
         icon: Icon(Icons.restaurant_menu_outlined),
         activeIcon: Icon(Icons.restaurant_menu),
         label: 'القوائم',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.campaign_outlined),
+        activeIcon: Icon(Icons.campaign),
+        label: 'الأخبار',
       ),
       const BottomNavigationBarItem(
         icon: Icon(Icons.settings_outlined),

@@ -83,8 +83,7 @@ class _SpecialOrderDetailsScreenState extends ConsumerState<SpecialOrderDetailsS
                       'الحي:',
                       widget.order.neighborhood?.name ?? 'غير محدد',
                     ),
-                    if (widget.order.user != null)
-                      _buildDetailRow('اسم العميل:', widget.order.user!.userName),
+                    _buildDetailRow('اسم العميل:', _displayCustomerName()),
                     _buildDetailRow('عنوان العميل:', widget.order.userAddress),
                     _buildPhoneDetailRow('رقم الهاتف:', widget.order.phoneNumber),
                     if (widget.order.price != null)
@@ -132,6 +131,21 @@ class _SpecialOrderDetailsScreenState extends ConsumerState<SpecialOrderDetailsS
         ),
       ),
     );
+  }
+
+  String _displayCustomerName() {
+    // For send-package orders, the sender's name (which may differ from the
+    // account owner) is embedded in additionalNotes as "الاسم: <name>".
+    // Prefer that when present; fall back to the account's registered name.
+    final notes = widget.order.additionalNotes;
+    if (notes != null) {
+      final match = RegExp(r'الاسم:\s*(.+)').firstMatch(notes);
+      final senderName = match?.group(1)?.trim();
+      if (senderName != null && senderName.isNotEmpty) {
+        return senderName;
+      }
+    }
+    return widget.order.user?.userName ?? 'غير محدد';
   }
 
   Widget _buildDetailRow(String label, String value) {

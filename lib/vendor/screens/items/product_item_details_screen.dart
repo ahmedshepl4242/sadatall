@@ -35,6 +35,8 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
   bool _isLoading = false;
   bool _isCreating = false; // True if creating new item
 
+  final List<_SizeRowControllers> _sizeRows = [];
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +47,10 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
     _priceController =
         TextEditingController(text: widget.productItem?.price.toString() ?? '');
     _isAvailable = widget.productItem?.isAvailable ?? true;
+
+    for (final size in widget.productItem?.sizes ?? const []) {
+      _sizeRows.add(_SizeRowControllers.fromSize(size));
+    }
   }
 
   @override
@@ -52,7 +58,74 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
     _nameController.dispose();
     _descriptionController.dispose();
     _priceController.dispose();
+    for (final row in _sizeRows) {
+      row.dispose();
+    }
     super.dispose();
+  }
+
+  void _addSizeRow() {
+    setState(() => _sizeRows.add(_SizeRowControllers()));
+  }
+
+  void _removeSizeRow(int index) {
+    setState(() {
+      _sizeRows[index].dispose();
+      _sizeRows.removeAt(index);
+    });
+  }
+
+  /// Validates the size rows and returns the parsed list, or null (showing a
+  /// SnackBar naming the failing row) if any row is invalid.
+  List<ItemSizeOption>? _validateAndCollectSizes() {
+    final sizes = <ItemSizeOption>[];
+
+    for (var i = 0; i < _sizeRows.length; i++) {
+      final row = _sizeRows[i];
+      final name = row.nameController.text.trim();
+      final priceText = row.priceController.text.trim();
+      final discountText = row.discountPriceController.text.trim();
+
+      if (name.isEmpty) {
+        _showError('يرجى إدخال اسم الحجم رقم ${i + 1}');
+        return null;
+      }
+
+      final price = double.tryParse(priceText);
+      if (price == null) {
+        _showError('يرجى إدخال سعر صحيح للحجم "$name"');
+        return null;
+      }
+
+      double? discountPrice;
+      if (discountText.isNotEmpty) {
+        discountPrice = double.tryParse(discountText);
+        if (discountPrice == null) {
+          _showError('يرجى إدخال سعر خصم صحيح للحجم "$name"');
+          return null;
+        }
+        if (discountPrice >= price) {
+          _showError('سعر الخصم يجب أن يكون أقل من السعر الأصلي للحجم "$name"');
+          return null;
+        }
+      }
+
+      sizes.add(ItemSizeOption(
+        id: row.id,
+        name: name,
+        price: price,
+        discountPrice: discountPrice,
+        isAvailable: row.isAvailable,
+      ));
+    }
+
+    return sizes;
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
   }
 
   Future<void> _pickImage() async {
@@ -95,6 +168,9 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
       return;
     }
 
+    final sizes = _validateAndCollectSizes();
+    if (sizes == null) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -114,6 +190,7 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
           description: description,
           price: price,
           isAvailable: _isAvailable,
+          sizes: sizes,
         );
       } else {
         // Update existing item - image is optional
@@ -124,6 +201,7 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
           description: description,
           price: price,
           isAvailable: _isAvailable,
+          sizes: sizes,
         );
       }
 
@@ -285,6 +363,10 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
 
                           // Price
                           _buildPriceField(theme),
+                          const SizedBox(height: 24),
+
+                          // Sizes / variants (optional)
+                          _buildSizesSection(theme),
                           const SizedBox(height: 24),
 
                           // Availability Toggle (editable mode only)
@@ -494,6 +576,186 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
     }
   }
 
+  Widget _buildSizesSection(ThemeData theme) {
+    if (!widget.isEditable) {
+      final sizes = widget.productItem?.sizes ?? const [];
+      if (sizes.isEmpty) return const SizedBox.shrink();
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'الأحجام والأسعار',
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          for (final size in sizes) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              margin: const EdgeInsets.only(bottom: 8),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[300]!),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      size.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (size.discountPrice != null) ...[
+                    Text(
+                      '${size.price.toStringAsFixed(0)} جنيه',
+                      style: const TextStyle(
+                        decoration: TextDecoration.lineThrough,
+                        color: AppTheme.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${size.discountPrice!.toStringAsFixed(0)} جنيه',
+                      style: const TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ] else
+                    Text(
+                      '${size.price.toStringAsFixed(0)} جنيه',
+                      style: const TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  if (!size.isAvailable) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Text(
+                        'غير متاح',
+                        style: TextStyle(color: Colors.white, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'الأحجام والأسعار (اختياري)',
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: AppTheme.textSecondary,
+          ),
+        ),
+        const SizedBox(height: 8),
+        for (var i = 0; i < _sizeRows.length; i++) ...[
+          _buildSizeRow(i),
+          const SizedBox(height: 8),
+        ],
+        OutlinedButton.icon(
+          onPressed: _addSizeRow,
+          icon: const Icon(Icons.add),
+          label: const Text('إضافة حجم جديد'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppTheme.primaryColor,
+            side: const BorderSide(color: AppTheme.primaryColor),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSizeRow(int index) {
+    final row = _sizeRows[index];
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextFormField(
+                  controller: row.nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'الحجم',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  controller: row.priceController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'السعر',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: () => _removeSizeRow(index),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  controller: row.discountPriceController,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  decoration: const InputDecoration(
+                    labelText: 'السعر بعد الخصم (اختياري)',
+                    isDense: true,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                children: [
+                  const Text('متوفر', style: TextStyle(fontSize: 12)),
+                  Switch(
+                    value: row.isAvailable,
+                    onChanged: (value) =>
+                        setState(() => row.isAvailable = value),
+                    activeTrackColor: AppTheme.successColor,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildAvailabilityToggle(ThemeData theme) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -669,5 +931,39 @@ class _ProductItemDetailsScreenState extends State<ProductItemDetailsScreen> {
               ),
       ),
     );
+  }
+}
+
+class _SizeRowControllers {
+  final String? id;
+  final TextEditingController nameController;
+  final TextEditingController priceController;
+  final TextEditingController discountPriceController;
+  bool isAvailable;
+
+  _SizeRowControllers({
+    this.id,
+    String name = '',
+    String price = '',
+    String discountPrice = '',
+    this.isAvailable = true,
+  })  : nameController = TextEditingController(text: name),
+        priceController = TextEditingController(text: price),
+        discountPriceController = TextEditingController(text: discountPrice);
+
+  factory _SizeRowControllers.fromSize(ItemSizeOption size) {
+    return _SizeRowControllers(
+      id: size.id,
+      name: size.name,
+      price: size.price.toString(),
+      discountPrice: size.discountPrice?.toString() ?? '',
+      isAvailable: size.isAvailable,
+    );
+  }
+
+  void dispose() {
+    nameController.dispose();
+    priceController.dispose();
+    discountPriceController.dispose();
   }
 }

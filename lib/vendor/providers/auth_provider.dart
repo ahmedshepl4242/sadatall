@@ -1,4 +1,5 @@
 
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import '../models/vendor.dart';
 import '../services/auth_service.dart';
@@ -64,20 +65,20 @@ class AuthProvider with ChangeNotifier {
         if (notificationService.fcmToken != null && notificationService.fcmToken!.isNotEmpty) {
           final response = await _orderService.updateFCMToken(notificationService.fcmToken!);
           if (kDebugMode) {
-            print(response.success 
+            (response.success 
                 ? 'FCM token sent successfully after login' 
                 : 'Failed to send FCM token: ${response.error}');
           }
         } else {
           if (kDebugMode) {
-            print('FCM token not available yet, will send when ready');
+            ('FCM token not available yet, will send when ready');
           }
           // Set up a small delay and try again
           await Future.delayed(const Duration(seconds: 1));
           if (notificationService.fcmToken != null && notificationService.fcmToken!.isNotEmpty) {
             final response = await _orderService.updateFCMToken(notificationService.fcmToken!);
             if (kDebugMode) {
-              print(response.success 
+              (response.success 
                   ? 'FCM token sent successfully after delay' 
                   : 'Failed to send FCM token after delay: ${response.error}');
             }
@@ -93,7 +94,7 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
       // Show user-friendly error message instead of just returning false
       if (kDebugMode) {
-        print('خطأ غير متوقع: ${e.toString()}');
+        ('خطأ غير متوقع: ${e.toString()}');
       }
       return false;
     }
@@ -112,7 +113,7 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
       // Show user-friendly error message instead of just returning false
       if (kDebugMode) {
-        print('خطأ غير متوقع أثناء تسجيل الخروج: ${e.toString()}');
+        ('خطأ غير متوقع أثناء تسجيل الخروج: ${e.toString()}');
       }
       return false;
     }
@@ -130,7 +131,7 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       _setLoading(false);
       if (kDebugMode) {
-        print('خطأ غير متوقع أثناء حذف الحساب: ${e.toString()}');
+        ('خطأ غير متوقع أثناء حذف الحساب: ${e.toString()}');
       }
       return false;
     }
@@ -146,6 +147,7 @@ class AuthProvider with ChangeNotifier {
     required double longitude,
     required int neighborhoodId,
     required List<int> categories,
+    required File image,
   }) async {
     _setLoading(true);
 
@@ -160,6 +162,7 @@ class AuthProvider with ChangeNotifier {
         longitude: longitude,
         neighborhoodId: neighborhoodId,
         categories: categories,
+        image: image,
       );
 
       if (result.success && result.vendor != null) {
@@ -176,7 +179,7 @@ class AuthProvider with ChangeNotifier {
       _setLoading(false);
       // Show user-friendly error message instead of just returning false
       if (kDebugMode) {
-        print('خطأ غير متوقع: ${e.toString()}');
+        ('خطأ غير متوقع: ${e.toString()}');
       }
       return false;
     }

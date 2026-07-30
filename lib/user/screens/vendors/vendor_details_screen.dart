@@ -9,27 +9,24 @@ import '../../services/cart_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common/skeleton_widget.dart';
 import '../../widgets/common/smart_image.dart';
+import '../../widgets/common/clickable_phone_field.dart';
 import '../orders/create_order_screen.dart';
 import '../items/product_item_details_screen.dart';
 
 class VendorDetailsScreen extends StatefulWidget {
   final Vendor vendor;
 
-  const VendorDetailsScreen({
-    super.key,
-    required this.vendor,
-  });
+  const VendorDetailsScreen({super.key, required this.vendor});
 
   @override
   State<VendorDetailsScreen> createState() => _VendorDetailsScreenState();
 }
 
-class _VendorDetailsScreenState extends State<VendorDetailsScreen>
-    with SingleTickerProviderStateMixin {
+class _VendorDetailsScreenState extends State<VendorDetailsScreen> {
   final UserVendorService _vendorService = UserVendorService();
   final CartService _cartService = CartService();
 
-  late TabController _tabController;
+  int _selectedTabIndex = 0; // 0 = menu, 1 = products
 
   List<MenuItem> _menuItems = [];
   List<ProductItem> _productItems = [];
@@ -43,19 +40,33 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
   int _currentProductPage = 1;
   bool _hasMoreData = true;
   bool _hasMoreProducts = true;
+  String _searchQuery = '';
 
+  // Single scroll controller for the whole page - there is only ever one
+  // scrollable now, so the outer page and the visible tab's items scroll
+  // together instead of fighting each other as two separate scrollables.
   final ScrollController _scrollController = ScrollController();
-  final ScrollController _productScrollController = ScrollController();
+  final TextEditingController _searchController = TextEditingController();
+
+  List<ProductItem> get _filteredProductItems {
+    if (_searchQuery.trim().isEmpty) return _productItems;
+    final query = _searchQuery.trim().toLowerCase();
+    return _productItems
+        .where(
+          (p) =>
+              p.name.toLowerCase().contains(query) ||
+              p.description.toLowerCase().contains(query),
+        )
+        .toList();
+  }
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
     _checkCartVendor();
     _loadMenuItems();
     _loadProductItems();
     _scrollController.addListener(_onScroll);
-    _productScrollController.addListener(_onProductScroll);
     _cartService.addListener(_onCartChanged);
   }
 
@@ -63,9 +74,8 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
 
   @override
   void dispose() {
-    _tabController.dispose();
     _scrollController.dispose();
-    _productScrollController.dispose();
+    _searchController.dispose();
     _cartService.removeListener(_onCartChanged);
     super.dispose();
   }
@@ -78,7 +88,8 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
 
   Future<void> _checkCartVendor() async {
     // Check if cart has items from a different vendor
-    if (_cartService.isNotEmpty && _cartService.needsVendorSwitch(widget.vendor.id)) {
+    if (_cartService.isNotEmpty &&
+        _cartService.needsVendorSwitch(widget.vendor.id)) {
       // Delay to ensure context is ready
       WidgetsBinding.instance.addPostFrameCallback((_) async {
         final confirmed = await _showVendorSwitchDialog();
@@ -94,21 +105,23 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
     }
   }
 
+  // Single listener on the one page-wide scroll controller: only trigger
+  // load-more for whichever tab is currently visible.
   void _onScroll() {
-    if (_scrollController.position.pixels >=
-            _scrollController.position.maxScrollExtent - 200 &&
-        !_isLoadingMore &&
-        _hasMoreData) {
-      _loadMoreMenuItems();
+    if (!_scrollController.hasClients) return;
+    if (_scrollController.position.pixels <
+        _scrollController.position.maxScrollExtent - 200) {
+      return;
     }
-  }
 
-  void _onProductScroll() {
-    if (_productScrollController.position.pixels >=
-            _productScrollController.position.maxScrollExtent - 200 &&
-        !_isLoadingMoreProducts &&
-        _hasMoreProducts) {
-      _loadMoreProductItems();
+    if (_selectedTabIndex == 0) {
+      if (!_isLoadingMore && _hasMoreData) {
+        _loadMoreMenuItems();
+      }
+    } else {
+      if (!_isLoadingMoreProducts && _hasMoreProducts) {
+        _loadMoreProductItems();
+      }
     }
   }
 
@@ -263,6 +276,18 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
     }
   }
 
+  void _navigateToTextOrder() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => CreateOrderScreen(
+          vendor: widget.vendor,
+          isCustomOrder: false,
+          isCheckout: false,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -324,9 +349,35 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
           ),
 
           // Vendor Information
-          SliverToBoxAdapter(
-            child: _buildVendorInfo(),
-          ),
+          SliverToBoxAdapter(child: _buildVendorInfo()),
+
+          // Search bar for products
+          if (!_isLoadingProducts && _productItems.isNotEmpty)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'ابحث عن صنف...',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                ),
+              ),
+            ),
 
           // Tab Bar (only show if menu has items)
           if (_shouldShowTabs)
@@ -337,105 +388,148 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
                   color: Colors.grey[200],
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: TabBar(
-                  controller: _tabController,
-                  indicator: BoxDecoration(
-                    color: AppTheme.primaryColor,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.black54,
-                  tabs: const [
-                    Tab(text: 'قائمة الطعام'),
-                    Tab(text: 'المنتجات'),
+                child: Row(
+                  children: [
+                    _buildTabButton('قائمة الطعام', 0),
+                    _buildTabButton('المنتجات', 1),
                   ],
                 ),
               ),
             ),
 
-          // Tab Content or Products only
-          SliverFillRemaining(
-            child: _shouldShowTabs
-                ? TabBarView(
-                    controller: _tabController,
-                    children: [
-                      _buildMenuItemsTab(),
-                      _buildProductItemsTab(),
-                    ],
-                  )
-                : _buildProductItemsTab(),
-          ),
+          // Items for whichever tab is selected, rendered as slivers directly
+          // in this single scroll view (no nested scrollables).
+          if (!_shouldShowTabs || _selectedTabIndex == 1)
+            ..._buildProductItemsSlivers()
+          else
+            ..._buildMenuItemsSlivers(),
         ],
       ),
     );
   }
 
-  Widget _buildMenuItemsTab() {
-    if (_isLoading) {
-      return _buildLoadingState();
-    }
-
-    if (_error != null) {
-      return _buildErrorStateWithCallback(_error!, _loadMenuItems);
-    }
-
-    if (_menuItems.isEmpty) {
-      return _buildEmptyStateWithMessage('لا توجد عناصر في القائمة');
-    }
-
-    return GridView.builder(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 16,
+  Widget _buildTabButton(String label, int index) {
+    final isSelected = _selectedTabIndex == index;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedTabIndex = index),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: isSelected ? AppTheme.primaryColor : Colors.transparent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: isSelected ? Colors.white : Colors.black54,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
       ),
-      itemCount: _menuItems.length + (_isLoadingMore ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= _menuItems.length) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final menuItem = _menuItems[index];
-        return _buildMenuItemCard(menuItem);
-      },
     );
   }
 
-  Widget _buildProductItemsTab() {
+  List<Widget> _buildMenuItemsSlivers() {
+    if (_isLoading) {
+      return [SliverToBoxAdapter(child: _buildLoadingState())];
+    }
+
+    if (_error != null) {
+      return [
+        SliverToBoxAdapter(
+          child: _buildErrorStateWithCallback(_error!, _loadMenuItems),
+        ),
+      ];
+    }
+
+    if (_menuItems.isEmpty) {
+      return [
+        SliverToBoxAdapter(
+          child: _buildEmptyStateWithMessage('لا توجد عناصر في القائمة'),
+        ),
+      ];
+    }
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.all(16),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 16,
+          ),
+          delegate: SliverChildBuilderDelegate((context, index) {
+            if (index >= _menuItems.length) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return _buildMenuItemCard(_menuItems[index]);
+          }, childCount: _menuItems.length + (_isLoadingMore ? 1 : 0)),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _buildProductItemsSlivers() {
     if (_isLoadingProducts) {
-      return _buildLoadingState();
+      return [SliverToBoxAdapter(child: _buildLoadingState())];
     }
 
     if (_productError != null) {
-      return _buildErrorStateWithCallback(_productError!, _loadProductItems);
+      return [
+        SliverToBoxAdapter(
+          child: _buildErrorStateWithCallback(
+            _productError!,
+            _loadProductItems,
+          ),
+        ),
+      ];
     }
 
     if (_productItems.isEmpty) {
-      return _buildEmptyStateWithMessage('لا توجد منتجات متاحة');
+      return [
+        SliverToBoxAdapter(
+          child: _buildEmptyStateWithMessage('لا توجد منتجات متاحة'),
+        ),
+      ];
     }
 
-    return GridView.builder(
-      controller: _productScrollController,
-      padding: const EdgeInsets.all(16),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: _productItems.length + (_isLoadingMoreProducts ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index >= _productItems.length) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    final filteredItems = _filteredProductItems;
 
-        final productItem = _productItems[index];
-        return _buildProductItemCard(productItem);
-      },
-    );
+    if (filteredItems.isEmpty) {
+      return [
+        SliverToBoxAdapter(
+          child: _buildEmptyStateWithMessage('لا توجد نتائج مطابقة للبحث'),
+        ),
+      ];
+    }
+
+    final showLoader = _isLoadingMoreProducts && _searchQuery.trim().isEmpty;
+
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.all(16),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: 8,
+            mainAxisSpacing: 16,
+          ),
+          delegate: SliverChildBuilderDelegate((context, index) {
+            if (index >= filteredItems.length) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return _buildProductItemCard(filteredItems[index]);
+          }, childCount: filteredItems.length + (showLoader ? 1 : 0)),
+        ),
+      ),
+    ];
   }
 
   Widget _buildVendorInfo() {
@@ -513,7 +607,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.grey[50],
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Row(
@@ -534,6 +628,8 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
             ),
           ),
 
+           
+
           const SizedBox(height: 16),
 
           // Order Button
@@ -549,7 +645,10 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 2,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               icon: const Icon(Icons.shopping_cart_checkout, size: 20),
               label: Row(
@@ -587,6 +686,29 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
               ),
             ),
           ),
+
+          if (isOpen && _cartService.isEmpty) ...[
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: OutlinedButton.icon(
+                onPressed: _navigateToTextOrder,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryColor,
+                  side: const BorderSide(color: AppTheme.primaryColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                icon: const Icon(Icons.edit_note, size: 20),
+                label: const Text(
+                  'اطلب بكتابة طلبك',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -594,21 +716,15 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
 
   Widget _buildMenuSection() {
     if (_isLoading) {
-      return SliverToBoxAdapter(
-        child: _buildLoadingState(),
-      );
+      return SliverToBoxAdapter(child: _buildLoadingState());
     }
 
     if (_error != null) {
-      return SliverToBoxAdapter(
-        child: _buildErrorState(),
-      );
+      return SliverToBoxAdapter(child: _buildErrorState());
     }
 
     if (_menuItems.isEmpty) {
-      return SliverToBoxAdapter(
-        child: _buildEmptyState(),
-      );
+      return SliverToBoxAdapter(child: _buildEmptyState());
     }
 
     return SliverPadding(
@@ -620,17 +736,14 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
           crossAxisSpacing: 8,
           mainAxisSpacing: 16,
         ),
-        delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            if (index >= _menuItems.length) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        delegate: SliverChildBuilderDelegate((context, index) {
+          if (index >= _menuItems.length) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            final menuItem = _menuItems[index];
-            return _buildMenuItemCard(menuItem);
-          },
-          childCount: _menuItems.length + (_isLoadingMore ? 1 : 0),
-        ),
+          final menuItem = _menuItems[index];
+          return _buildMenuItemCard(menuItem);
+        }, childCount: _menuItems.length + (_isLoadingMore ? 1 : 0)),
       ),
     );
   }
@@ -667,7 +780,11 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
                   top: 50,
                   right: 20,
                   child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
@@ -684,9 +801,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () => _showMenuItemDetails(menuItem),
         borderRadius: BorderRadius.circular(12),
@@ -701,9 +816,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
                 child: Hero(
                   tag: 'menu-item-${menuItem.id}',
                   child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                    ),
+                    decoration: BoxDecoration(color: Colors.grey[200]),
                     child: Stack(
                       children: [
                         Positioned.fill(
@@ -751,7 +864,8 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
                   padding: const EdgeInsets.all(12),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center, // Center content vertically
+                    mainAxisAlignment:
+                        MainAxisAlignment.center, // Center content vertically
                     children: [
                       Text(
                         'عنصر القائمة ${menuItem.id}',
@@ -770,7 +884,8 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
                             color: AppTheme.textSecondary,
                           ),
                           const SizedBox(width: 4),
-                          Expanded( // Wrap text in Expanded to prevent overflow
+                          Expanded(
+                            // Wrap text in Expanded to prevent overflow
                             child: Text(
                               'اضغط للعرض بالحجم الكامل',
                               style: TextStyle(
@@ -778,7 +893,8 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
                                 color: AppTheme.textSecondary,
                               ),
                               maxLines: 1, // Limit to 1 line
-                              overflow: TextOverflow.ellipsis, // Add ellipsis if overflow
+                              overflow: TextOverflow
+                                  .ellipsis, // Add ellipsis if overflow
                             ),
                           ),
                         ],
@@ -818,11 +934,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: AppTheme.errorColor,
-          ),
+          Icon(Icons.error_outline, size: 64, color: AppTheme.errorColor),
           const SizedBox(height: 16),
           Text(
             _error!,
@@ -845,11 +957,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.restaurant_menu_outlined,
-            size: 64,
-            color: Colors.grey,
-          ),
+          Icon(Icons.restaurant_menu_outlined, size: 64, color: Colors.grey),
           SizedBox(height: 16),
           Text(
             'لا توجد عناصر في القائمة',
@@ -863,9 +971,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
   Widget _buildMenuItemCardSkeleton() {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -893,17 +999,16 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
     );
   }
 
-  Widget _buildErrorStateWithCallback(String errorMessage, VoidCallback onRetry) {
+  Widget _buildErrorStateWithCallback(
+    String errorMessage,
+    VoidCallback onRetry,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
-            size: 64,
-            color: AppTheme.errorColor,
-          ),
+          Icon(Icons.error_outline, size: 64, color: AppTheme.errorColor),
           const SizedBox(height: 16),
           Text(
             errorMessage,
@@ -926,11 +1031,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(
-            Icons.inventory_2_outlined,
-            size: 64,
-            color: Colors.grey,
-          ),
+          const Icon(Icons.inventory_2_outlined, size: 64, color: Colors.grey),
           const SizedBox(height: 16),
           Text(
             message,
@@ -947,9 +1048,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
 
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         onTap: () {
           Navigator.of(context).push(
@@ -971,9 +1070,7 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
               Expanded(
                 flex: 3,
                 child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                  ),
+                  decoration: BoxDecoration(color: Colors.grey[200]),
                   child: Stack(
                     children: [
                       Positioned.fill(
@@ -1063,7 +1160,10 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
               // Counter buttons
               if (productItem.isAvailable)
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 8,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -1084,7 +1184,9 @@ class _VendorDetailsScreenState extends State<VendorDetailsScreen>
                           ),
                           child: Icon(
                             Icons.remove,
-                            color: quantity > 0 ? Colors.white : Colors.grey[500],
+                            color: quantity > 0
+                                ? Colors.white
+                                : Colors.grey[500],
                             size: 18,
                           ),
                         ),

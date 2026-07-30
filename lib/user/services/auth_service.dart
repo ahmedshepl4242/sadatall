@@ -56,7 +56,7 @@ class AuthService {
           }
         } catch (e) {
           if (kDebugMode) {
-            print('Error sending FCM token after login: $e');
+            ('Error sending FCM token after login: $e');
           }
         }
 
@@ -128,7 +128,7 @@ class AuthService {
           }
         } catch (e) {
           if (kDebugMode) {
-            print('Error sending FCM token after signup: $e');
+            ('Error sending FCM token after signup: $e');
           }
         }
 

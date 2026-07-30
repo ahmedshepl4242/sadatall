@@ -34,11 +34,11 @@ class NotificationService {
       _isInitialized = true;
 
       if (kDebugMode) {
-        print('NotificationService initialized successfully');
+        ('NotificationService initialized successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('NotificationService initialization error: $e');
+        ('NotificationService initialization error: $e');
       }
     }
   }
@@ -56,7 +56,7 @@ class NotificationService {
       );
 
       if (kDebugMode) {
-        print(
+        (
             'iOS notification permission status: ${settings.authorizationStatus}');
       }
     } else if (Platform.isAndroid) {
@@ -111,7 +111,7 @@ class NotificationService {
       _fcmToken = await _messaging.getToken();
 
       if (kDebugMode) {
-        print('FCM Token: $_fcmToken');
+        ('FCM Token: $_fcmToken');
       }
 
       // Send token to backend
@@ -123,21 +123,21 @@ class NotificationService {
       _messaging.onTokenRefresh.listen((newToken) async {
         _fcmToken = newToken;
         if (kDebugMode) {
-          print('FCM Token refreshed: $newToken');
+          ('FCM Token refreshed: $newToken');
         }
         await _orderService.updateFCMToken(newToken);
       });
     } catch (e) {
       if (kDebugMode) {
-        print('Error getting FCM token: $e');
+        ('Error getting FCM token: $e');
       }
     }
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
     if (kDebugMode) {
-      print('Foreground message: ${message.messageId}');
-      print('Data: ${message.data}');
+      ('Foreground message: ${message.messageId}');
+      ('Data: ${message.data}');
     }
 
     // Show local notification when app is in foreground
@@ -146,8 +146,8 @@ class NotificationService {
 
   void _handleNotificationTap(RemoteMessage message) {
     if (kDebugMode) {
-      print('Notification tapped: ${message.messageId}');
-      print('Data: ${message.data}');
+      ('Notification tapped: ${message.messageId}');
+      ('Data: ${message.data}');
     }
 
     // Handle navigation based on notification data
@@ -156,7 +156,7 @@ class NotificationService {
 
   void _onNotificationTapped(NotificationResponse response) {
     if (kDebugMode) {
-      print('Local notification tapped: ${response.payload}');
+      ('Local notification tapped: ${response.payload}');
     }
 
     // Handle navigation based on payload
@@ -212,19 +212,19 @@ class NotificationService {
           // Navigate to order details
           // This would typically use a navigation service or global navigator
           if (kDebugMode) {
-            print('Navigate to order: $orderId');
+            ('Navigate to order: $orderId');
           }
         }
         break;
       case 'customer_message':
         // Navigate to messages or chat
         if (kDebugMode) {
-          print('Navigate to customer message');
+          ('Navigate to customer message');
         }
         break;
       default:
         if (kDebugMode) {
-          print('Unknown notification type: $type');
+          ('Unknown notification type: $type');
         }
     }
   }
@@ -349,11 +349,11 @@ class NotificationService {
     try {
       await _messaging.subscribeToTopic(topic);
       if (kDebugMode) {
-        print('Subscribed to topic: $topic');
+        ('Subscribed to topic: $topic');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error subscribing to topic $topic: $e');
+        ('Error subscribing to topic $topic: $e');
       }
     }
   }
@@ -362,11 +362,11 @@ class NotificationService {
     try {
       await _messaging.unsubscribeFromTopic(topic);
       if (kDebugMode) {
-        print('Unsubscribed from topic: $topic');
+        ('Unsubscribed from topic: $topic');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error unsubscribing from topic $topic: $e');
+        ('Error unsubscribing from topic $topic: $e');
       }
     }
   }
@@ -376,7 +376,7 @@ class NotificationService {
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   if (kDebugMode) {
-    print('Background message: ${message.messageId}');
-    print('Data: ${message.data}');
+    ('Background message: ${message.messageId}');
+    ('Data: ${message.data}');
   }
 }

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../widgets/common/custom_text_field.dart';
@@ -5,6 +6,7 @@ import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/loading_overlay.dart';
 import '../../widgets/common/neighborhood_dropdown.dart';
 import '../../widgets/common/category_selector.dart';
+import '../../widgets/common/image_picker_widget.dart';
 import '../../services/auth_service.dart';
 import '../../services/location_service.dart';
 import '../../theme/app_theme.dart';
@@ -35,6 +37,8 @@ class _SignupScreenState extends State<SignupScreen> {
   double? _longitude;
   String? _selectedNeighborhoodId;
   List<String> _selectedCategoryIds = [];
+  File? _selectedImage;
+  String? _imageError;
 
   @override
   void dispose() {
@@ -102,6 +106,19 @@ class _SignupScreenState extends State<SignupScreen> {
       return;
     }
 
+    if (_selectedImage == null) {
+      setState(() {
+        _imageError = 'يرجى إضافة صورة للمتجر';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('يرجى إضافة صورة للمتجر'),
+          backgroundColor: AppTheme.errorColor,
+        ),
+      );
+      return;
+    }
+
     if (_latitude == null || _longitude == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -148,6 +165,7 @@ class _SignupScreenState extends State<SignupScreen> {
         longitude: _longitude!,
         neighborhoodId: int.parse(_selectedNeighborhoodId!),
         categories: _selectedCategoryIds.map((id) => int.parse(id)).toList(),
+        image: _selectedImage!,
       );
 
       if (mounted) {
@@ -234,6 +252,32 @@ class _SignupScreenState extends State<SignupScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
+
+                // Store Image
+                ImagePickerWidget(
+                  initialImage: _selectedImage,
+                  label: 'صورة المتجر',
+                  hint: 'اضغط لإضافة صورة المتجر',
+                  required: true,
+                  height: 150,
+                  onImageSelected: (file) {
+                    setState(() {
+                      _selectedImage = file;
+                      _imageError = null;
+                    });
+                  },
+                ),
+                if (_imageError != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    _imageError!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
 
                 // Vendor Name
                 CustomTextField(

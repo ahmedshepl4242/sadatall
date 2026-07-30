@@ -21,6 +21,7 @@ OrderModel _$OrderModelFromJson(Map<String, dynamic> json) => OrderModel(
   phoneNumber: json['phoneNumber'] as String,
   price: (json['price'] as num?)?.toDouble(),
   deliveryPrice: (json['deliveryPrice'] as num?)?.toDouble(),
+  waitingTime: (json['waitingTime'] as num?)?.toInt(),
   createdAt: OrderModel._dateTimeFromJsonRequired(json['createdAt'] as String),
   counterOfferSentAt: OrderModel._dateTimeFromJson(
     json['counterOfferSentAt'] as String?,
@@ -64,6 +65,7 @@ Map<String, dynamic> _$OrderModelToJson(
   'phoneNumber': instance.phoneNumber,
   'price': instance.price,
   'deliveryPrice': instance.deliveryPrice,
+  'waitingTime': instance.waitingTime,
   'createdAt': OrderModel._dateTimeToJsonRequired(instance.createdAt),
   'counterOfferSentAt': OrderModel._dateTimeToJson(instance.counterOfferSentAt),
   'acceptedByVend': OrderModel._dateTimeToJson(instance.acceptedByVend),
@@ -99,6 +101,9 @@ VendorInfo _$VendorInfoFromJson(Map<String, dynamic> json) => VendorInfo(
   address: json['address'] as String,
   longitude: (json['longitude'] as num?)?.toDouble(),
   latitude: (json['latitude'] as num?)?.toDouble(),
+  neighborhood: json['neighborhood'] == null
+      ? null
+      : NeighborhoodInfo.fromJson(json['neighborhood'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$VendorInfoToJson(VendorInfo instance) =>
@@ -109,6 +114,7 @@ Map<String, dynamic> _$VendorInfoToJson(VendorInfo instance) =>
       'address': instance.address,
       'longitude': instance.longitude,
       'latitude': instance.latitude,
+      'neighborhood': instance.neighborhood,
     };
 
 NeighborhoodInfo _$NeighborhoodInfoFromJson(Map<String, dynamic> json) =>

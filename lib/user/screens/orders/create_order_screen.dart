@@ -40,6 +40,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final _phoneNumberController = TextEditingController();
 
   // Controllers for package sender/receiver info
+  final _senderNameController = TextEditingController();
   final _senderPhoneController = TextEditingController();
   final _senderAddressController = TextEditingController();
   final _receiverPhoneController = TextEditingController();
@@ -79,6 +80,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       setState(() {
         // Prefill the form fields with user profile data
         _phoneNumberController.text = user.phoneNumber;
+        _senderNameController.text = user.userName;
+        _senderPhoneController.text = user.phoneNumber;
         _selectedNeighborhoodId = user.neighborhoodId;
 
         // If in send package mode, set fixed description
@@ -92,8 +95,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       });
 
       // Fetch delivery price for initial neighborhood if in checkout mode
-      if (widget.isCheckout && 
-          user.neighborhoodId != null && 
+      if (widget.isCheckout &&
+          user.neighborhoodId != null &&
           widget.vendor != null) {
         await _fetchDeliveryPrice(user.neighborhoodId!);
       }
@@ -105,6 +108,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     _descriptionController.dispose();
     _additionalNotesController.dispose();
     _phoneNumberController.dispose();
+    _senderNameController.dispose();
     _senderPhoneController.dispose();
     _senderAddressController.dispose();
     _receiverPhoneController.dispose();
@@ -236,13 +240,18 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       String phoneNumber;
 
       if (widget.isSendPackage) {
-        additionalNotes = 'من (المرسل):\n'
+        final packageNote = _additionalNotesController.text.trim();
+        additionalNotes =
+            'من (المرسل):\n'
+            'الاسم: ${_senderNameController.text.trim()}\n'
             'رقم الهاتف: ${_senderPhoneController.text.trim()}\n'
             'العنوان: ${_senderAddressController.text.trim()}\n\n'
             'إلى (المستلم):\n'
             'رقم الهاتف: ${_receiverPhoneController.text.trim()}\n'
-            'العنوان: ${_receiverAddressController.text.trim()}';
-        phoneNumber = _senderPhoneController.text.trim(); // Use sender's phone for the order
+            'العنوان: ${_receiverAddressController.text.trim()}'
+            '${packageNote.isNotEmpty ? '\n\nملاحظة: $packageNote' : ''}';
+        phoneNumber = _senderPhoneController.text
+            .trim(); // Use sender's phone for the order
       } else {
         additionalNotes = _additionalNotesController.text.trim();
         phoneNumber = _phoneNumberController.text.trim();
@@ -251,6 +260,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       final result = await _orderService.createOrder(
         vendorId: vendorId,
         description: _descriptionController.text.trim(),
+        price: _cartService.getTotalItemsPrice(),
         additionalNotes: additionalNotes,
         userAddress: '', // Empty for compatibility
         phoneNumber: phoneNumber,
@@ -306,15 +316,12 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          widget.isSendPackage 
-            ? 'ارسال طرد' 
-            : widget.isCustomOrder 
-              ? 'طلب مخصص' 
+          widget.isSendPackage
+              ? 'ارسال طرد'
+              : widget.isCustomOrder
+              ? 'طلب مخصص'
               : 'طلب جديد',
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 20,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
         backgroundColor: AppTheme.primaryColor,
         foregroundColor: Colors.white,
@@ -337,10 +344,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     elevation: 3,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(
-                        color: AppTheme.primaryColor,
-                        width: 1,
-                      ),
+                      side: BorderSide(color: AppTheme.primaryColor, width: 1),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(20),
@@ -415,13 +419,16 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   hint: widget.isCheckout
                       ? 'العناصر المحددة'
                       : widget.isSendPackage
-                        ? 'طرد مرسل'
-                        : 'أدخل تفاصيل ما تريد طلبه',
+                      ? 'طرد مرسل'
+                      : 'أدخل تفاصيل ما تريد طلبه',
                   controller: _descriptionController,
                   prefixIcon: Icons.description,
                   maxLines: 3,
                   textInputAction: TextInputAction.newline,
-                  enabled: !widget.isCheckout && !widget.isSendPackage, // Read-only in checkout and send package mode
+                  enabled:
+                      !widget.isCheckout &&
+                      !widget
+                          .isSendPackage, // Read-only in checkout and send package mode
                 ),
                 const SizedBox(height: 16),
 
@@ -455,6 +462,20 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           ],
                         ),
                         const SizedBox(height: 16),
+                        CustomTextField(
+                          label: 'اسم المرسل *',
+                          hint: 'أدخل اسم المرسل',
+                          controller: _senderNameController,
+                          prefixIcon: Icons.person,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'اسم المرسل مطلوب';
+                            }
+                            return null;
+                          },
+                          textInputAction: TextInputAction.next,
+                        ),
+                        const SizedBox(height: 12),
                         CustomTextField(
                           label: 'رقم هاتف المرسل *',
                           hint: 'أدخل رقم هاتف المرسل',
@@ -499,8 +520,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             return null;
                           },
                           labelText: 'الحي',
-                          prefixIcon:
-                              Icon(Icons.location_city, color: Colors.purple[700]),
+                          prefixIcon: Icon(
+                            Icons.location_city,
+                            color: Colors.purple[700],
+                          ),
                         ),
                         const SizedBox(height: 12),
 
@@ -652,6 +675,17 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     ),
                   ),
                   const SizedBox(height: 16),
+
+                  // Optional note for the package
+                  CustomTextField(
+                    label: 'ملاحظة (اختياري)',
+                    hint: 'أي ملاحظات أو تعليمات خاصة بالطرد',
+                    controller: _additionalNotesController,
+                    prefixIcon: Icons.note,
+                    maxLines: 2,
+                    textInputAction: TextInputAction.newline,
+                  ),
+                  const SizedBox(height: 16),
                 ] else ...[
                   CustomTextField(
                     label: 'ملاحظات إضافية',
@@ -698,8 +732,10 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                       return null;
                     },
                     labelText: 'الحي',
-                    prefixIcon:
-                        Icon(Icons.location_city, color: Colors.purple[700]),
+                    prefixIcon: Icon(
+                      Icons.location_city,
+                      color: Colors.purple[700],
+                    ),
                   ),
                   const SizedBox(height: 16),
                 ],
@@ -720,7 +756,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           children: [
                             Icon(
                               Icons.my_location,
-                              color: theme.colorScheme.onSurface.withOpacity(0.6),
+                              color: theme.colorScheme.onSurface.withOpacity(
+                                0.6,
+                              ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -800,8 +838,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   const SizedBox(height: 16),
                 ],
 
-                // Attachments Section (for checkout mode, custom orders, and send package)
-                if (widget.isCheckout || widget.isCustomOrder || widget.isSendPackage) ...[
+                // Attachments Section (every order type except cart checkout,
+                // which has its own cart-based flow)
+                if (!widget.isCheckout) ...[
                   AttachmentListWidget(
                     orderId: _orderId,
                     attachments: _attachments,
@@ -848,14 +887,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                         const SizedBox(height: 12),
                         const Divider(),
                         const SizedBox(height: 8),
-                        
+
                         // Cart items list (only if not empty)
                         if (_cartService.isNotEmpty) ...[
                           ..._cartService.items.map((item) {
                             return Padding(
                               padding: const EdgeInsets.symmetric(vertical: 4),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Text(
@@ -873,11 +913,11 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                               ),
                             );
                           }).toList(),
-                          
+
                           const SizedBox(height: 12),
                           const Divider(),
                           const SizedBox(height: 8),
-                          
+
                           // Total items price
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -898,7 +938,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                           ),
                           const SizedBox(height: 8),
                         ],
-                        
+
                         // Delivery price (always show)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -932,13 +972,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             ),
                           ],
                         ),
-                        
+
                         // Total price (only if cart has items)
                         if (_cartService.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           const Divider(thickness: 2),
                           const SizedBox(height: 8),
-                          
+
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -959,7 +999,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                             ],
                           ),
                           const SizedBox(height: 8),
-                          
+
                           // Info note
                           Container(
                             padding: const EdgeInsets.all(8),

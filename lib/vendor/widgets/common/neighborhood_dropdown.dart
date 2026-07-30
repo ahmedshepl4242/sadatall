@@ -60,26 +60,55 @@ class _NeighborhoodDropdownState extends State<NeighborhoodDropdown> {
     }
   }
 
+  Neighborhood? get _selected {
+    if (widget.selectedNeighborhoodId == null) return null;
+    for (final n in _neighborhoods) {
+      if (n.id == widget.selectedNeighborhoodId) return n;
+    }
+    return null;
+  }
+
+  Future<Neighborhood?> _openPicker() async {
+    final result = await showModalBottomSheet<Neighborhood>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _NeighborhoodSearchSheet(neighborhoods: _neighborhoods),
+    );
+    if (result != null) {
+      widget.onChanged(result.id);
+    }
+    return result;
+  }
+
+  InputDecoration _decoration({String? hintText}) {
+    return InputDecoration(
+      labelText: widget.labelText,
+      labelStyle: const TextStyle(color: Colors.grey),
+      prefixIcon:
+          widget.prefixIcon ??
+          Icon(Icons.location_city, color: Colors.purple[700]),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.purple[700]!, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.red[600]!),
+      ),
+      hintText: hintText,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return DropdownButtonFormField<String>(
-        decoration: InputDecoration(
-          labelText: widget.labelText,
-          labelStyle: const TextStyle(color: Colors.grey),
-          prefixIcon: widget.prefixIcon ??
-              Icon(Icons.location_city, color: Colors.purple[700]),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.purple[700]!, width: 2),
-          ),
-        ),
-        items: const [],
-        onChanged: null,
-        hint: const Row(
+      return InputDecorator(
+        decoration: _decoration(),
+        child: const Row(
           children: [
             SizedBox(
               width: 16,
@@ -97,23 +126,9 @@ class _NeighborhoodDropdownState extends State<NeighborhoodDropdown> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DropdownButtonFormField<String>(
-            decoration: InputDecoration(
-              labelText: widget.labelText,
-              labelStyle: const TextStyle(color: Colors.grey),
-              prefixIcon: widget.prefixIcon ??
-                  Icon(Icons.location_city, color: Colors.purple[700]),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: Colors.purple[700]!, width: 2),
-              ),
-            ),
-            items: const [],
-            onChanged: null,
-            hint: Text(
+          InputDecorator(
+            decoration: _decoration(),
+            child: Text(
               'خطأ في التحميل',
               style: TextStyle(color: Colors.red[600]),
             ),
@@ -126,10 +141,7 @@ class _NeighborhoodDropdownState extends State<NeighborhoodDropdown> {
               Expanded(
                 child: Text(
                   _error!,
-                  style: TextStyle(
-                    color: Colors.red[600],
-                    fontSize: 12,
-                  ),
+                  style: TextStyle(color: Colors.red[600], fontSize: 12),
                 ),
               ),
               TextButton(
@@ -142,34 +154,144 @@ class _NeighborhoodDropdownState extends State<NeighborhoodDropdown> {
       );
     }
 
-    return DropdownButtonFormField<String>(
-      value: widget.selectedNeighborhoodId,
-      decoration: InputDecoration(
-        labelText: widget.labelText,
-        labelStyle: const TextStyle(color: Colors.grey),
-        prefixIcon: widget.prefixIcon ??
-            Icon(Icons.location_city, color: Colors.purple[700]),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.purple[700]!, width: 2),
+    return FormField<String>(
+      initialValue: widget.selectedNeighborhoodId,
+      validator: widget.validator,
+      builder: (field) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () async {
+                final result = await _openPicker();
+                if (result != null) {
+                  field.didChange(result.id);
+                }
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: InputDecorator(
+                decoration: _decoration().copyWith(
+                  errorText: field.errorText,
+                  suffixIcon: const Icon(Icons.arrow_drop_down),
+                ),
+                child: Text(
+                  _selected?.name ?? 'اختر المنطقة',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _selected != null ? null : Colors.grey[600],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _NeighborhoodSearchSheet extends StatefulWidget {
+  final List<Neighborhood> neighborhoods;
+
+  const _NeighborhoodSearchSheet({required this.neighborhoods});
+
+  @override
+  State<_NeighborhoodSearchSheet> createState() =>
+      _NeighborhoodSearchSheetState();
+}
+
+class _NeighborhoodSearchSheetState extends State<_NeighborhoodSearchSheet> {
+  final _searchController = TextEditingController();
+  late List<Neighborhood> _filtered;
+
+  @override
+  void initState() {
+    super.initState();
+    _filtered = widget.neighborhoods;
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearch(String query) {
+    setState(() {
+      _filtered = widget.neighborhoods
+          .where(
+            (n) => n.name.toLowerCase().contains(query.trim().toLowerCase()),
+          )
+          .toList();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'اختر المنطقة',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _searchController,
+              autofocus: true,
+              decoration: InputDecoration(
+                hintText: 'ابحث عن حي...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearch('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onChanged: _onSearch,
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: _filtered.isEmpty
+                  ? const Center(child: Text('لا توجد نتائج'))
+                  : ListView.separated(
+                      itemCount: _filtered.length,
+                      separatorBuilder: (_, __) => const Divider(height: 1),
+                      itemBuilder: (_, i) {
+                        final neighborhood = _filtered[i];
+                        return ListTile(
+                          leading: const Icon(Icons.location_city),
+                          title: Text(neighborhood.name),
+                          onTap: () => Navigator.of(context).pop(neighborhood),
+                        );
+                      },
+                    ),
+            ),
+          ],
         ),
       ),
-      hint: const Text('اختر المنطقة'),
-      items: _neighborhoods.map((neighborhood) {
-        return DropdownMenuItem<String>(
-          value: neighborhood.id,
-          child: Text(
-            neighborhood.name,
-            overflow: TextOverflow.ellipsis,
-          ),
-        );
-      }).toList(),
-      onChanged: widget.onChanged,
-      validator: widget.validator,
-      isExpanded: true,
     );
   }
 }

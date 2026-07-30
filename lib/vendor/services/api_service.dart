@@ -18,40 +18,42 @@ class ApiService {
 
   void initialize() {
     // Initialize with default URL first
-    _dio = Dio(BaseOptions(
-      baseUrl: AppConstants.baseUrl,
-      connectTimeout: Duration(seconds: AppConstants.connectionTimeout),
-      receiveTimeout: Duration(seconds: AppConstants.receiveTimeout),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-Tenant-ID': AppConstants.tenantId,
-      },
-    ));
+    _dio = Dio(
+      BaseOptions(
+        baseUrl: AppConstants.baseUrl,
+        connectTimeout: Duration(seconds: AppConstants.connectionTimeout),
+        receiveTimeout: Duration(seconds: AppConstants.receiveTimeout),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-Tenant-ID': AppConstants.tenantId,
+        },
+      ),
+    );
 
-    if (kDebugMode) {
-      _dio.interceptors.add(
-        LogInterceptor(
-          request: true,
-          requestHeader: false, // Hide headers to reduce clutter
-          requestBody: true,
-          responseHeader: false, // Hide headers to reduce clutter
-          responseBody: true,
-          error: true,
-          logPrint: (obj) {
-            // Custom logging that focuses on requests and responses
-            String logMessage = obj.toString();
-            if (logMessage.contains('<--') || logMessage.contains('-->')) {
-              // This is a request/response log line
-            } else if (logMessage.contains('DioException') ||
-                logMessage.contains('ERROR')) {
-              // This is an error log
-            }
-            // Ignore other log lines that are too verbose
-          },
-        ),
-      );
-    }
+    // if (kDebugMode) {
+    //   _dio.interceptors.add(
+    //     LogInterceptor(
+    //       request: true,
+    //       requestHeader: false, // Hide headers to reduce clutter
+    //       requestBody: true,
+    //       responseHeader: false, // Hide headers to reduce clutter
+    //       responseBody: true,
+    //       error: true,
+    //       log: (obj) {
+    //         // Custom logging that focuses on requests and responses
+    //         String logMessage = obj.toString();
+    //         if (logMessage.contains('<--') || logMessage.contains('-->')) {
+    //           // This is a request/response log line
+    //         } else if (logMessage.contains('DioException') ||
+    //             logMessage.contains('ERROR')) {
+    //           // This is an error log
+    //         }
+    //         // Ignore other log lines that are too verbose
+    //       },
+    //     ),
+    //   );
+    // }
 
     _setupInterceptors();
   }
@@ -71,22 +73,21 @@ class ApiService {
           }
 
           if (kDebugMode) {
-            debugPrint('REQUEST[${options.method}] => URL: ${options.uri}');
-            debugPrint('Headers: ${options.headers}');
+            ('REQUEST[${options.method}] => URL: ${options.uri}');
+            ('Headers: ${options.headers}');
             if (options.queryParameters.isNotEmpty) {
-              debugPrint('Query: ${options.queryParameters}');
+              ('Query: ${options.queryParameters}');
             }
             if (options.data is FormData) {
-              debugPrint(
-                  'Data: FormData with ${(options.data as FormData).fields.length} fields and ${(options.data as FormData).files.length} files');
+              ('Data: FormData with ${(options.data as FormData).fields.length} fields and ${(options.data as FormData).files.length} files');
               for (var field in (options.data as FormData).fields) {
-                debugPrint('Field: ${field.key} = ${field.value}');
+                ('Field: ${field.key} = ${field.value}');
               }
               for (var file in (options.data as FormData).files) {
-                debugPrint('File: ${file.key} = ${file.value.filename}');
+                ('File: ${file.key} = ${file.value.filename}');
               }
             } else {
-              debugPrint('Data: ${options.data}');
+              ('Data: ${options.data}');
             }
           }
 
@@ -94,18 +95,16 @@ class ApiService {
         },
         onResponse: (response, handler) {
           if (kDebugMode) {
-            debugPrint(
-                'RESPONSE[${response.statusCode}] => URL: ${response.requestOptions.uri}');
-            debugPrint('Data: ${response.data}');
+            ('RESPONSE[${response.statusCode}] => URL: ${response.requestOptions.uri}');
+            ('Data: ${response.data}');
           }
           handler.next(response);
         },
         onError: (error, handler) async {
           if (kDebugMode) {
-            debugPrint(
-                'ERROR[${error.response?.statusCode}] => URL: ${error.requestOptions.uri}');
-            debugPrint('Message: ${error.message}');
-            debugPrint('Data: ${error.response?.data}');
+            ('ERROR[${error.response?.statusCode}] => URL: ${error.requestOptions.uri}');
+            ('Message: ${error.message}');
+            ('Data: ${error.response?.data}');
           }
 
           // Handle 401 Unauthorized errors
@@ -113,16 +112,17 @@ class ApiService {
             // Check if the error response contains the word "locked"
             bool isVendorLocked = false;
             String? errorMessage;
-            
+
             if (error.response?.data is Map<String, dynamic>) {
               final responseData = error.response!.data as Map<String, dynamic>;
-              errorMessage = responseData['error']?.toString() ?? 
-                            responseData['message']?.toString();
-              
+              errorMessage =
+                  responseData['error']?.toString() ??
+                  responseData['message']?.toString();
+
               // Check for vendor locked indicators in the error message
               if (errorMessage != null) {
                 final lowerError = errorMessage.toLowerCase();
-                if (lowerError.contains('locked') || 
+                if (lowerError.contains('locked') ||
                     lowerError.contains('مغلق')) {
                   isVendorLocked = true;
                 }
@@ -133,8 +133,7 @@ class ApiService {
             if (isVendorLocked) {
               await _storageService.clearAllTokens();
               if (kDebugMode) {
-                debugPrint(
-                    'Vendor is locked, showing management unlock message...');
+                ('Vendor is locked, showing management unlock message...');
               }
 
               // Show message that management should unlock the vendor
@@ -144,14 +143,18 @@ class ApiService {
                     context: navigatorKey.currentContext!,
                     builder: (context) => AlertDialog(
                       title: const Text('الحساب مغلق'),
-                      content: const Text('الحساب مغلق الآن، يرجى الاتصال بالادارة لفتح الحساب'),
+                      content: const Text(
+                        'الحساب مغلق الآن، يرجى الاتصال بالادارة لفتح الحساب',
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () {
                             Navigator.of(context).pop();
                             // Navigate to login page after showing the message
-                            navigatorKey.currentState
-                                ?.pushNamedAndRemoveUntil('/login', (route) => false);
+                            navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                              '/login',
+                              (route) => false,
+                            );
                           },
                           child: const Text('موافق'),
                         ),
@@ -160,11 +163,13 @@ class ApiService {
                   );
                 } else {
                   // If context is not available, just navigate to login
-                  navigatorKey.currentState
-                      ?.pushNamedAndRemoveUntil('/login', (route) => false);
+                  navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                    '/login',
+                    (route) => false,
+                  );
                 }
               });
-              
+
               handler.next(error);
               return;
             }
@@ -182,15 +187,16 @@ class ApiService {
               // clear all tokens and navigate to login page
               await _storageService.clearAllTokens();
               if (kDebugMode) {
-                debugPrint(
-                    'Refresh token endpoint returned 401, redirecting to login...');
+                ('Refresh token endpoint returned 401, redirecting to login...');
               }
 
               // Navigate to login page using the global navigator key
               // Using WidgetsBinding to ensure the navigator is ready
               WidgetsBinding.instance.addPostFrameCallback((_) {
-                navigatorKey.currentState
-                    ?.pushNamedAndRemoveUntil('/login', (route) => false);
+                navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  '/login',
+                  (route) => false,
+                );
               });
 
               handler.next(error);
@@ -216,20 +222,21 @@ class ApiService {
                     data: error.requestOptions.data,
                     queryParameters: error.requestOptions.queryParameters,
                   );
-                  
+
                   // Check again if the response indicates vendor is locked after refresh
                   if (response.data is Map<String, dynamic>) {
                     final responseData = response.data as Map<String, dynamic>;
-                    String? responseMessage = responseData['error']?.toString() ?? 
-                                          responseData['message']?.toString();
-                    
+                    String? responseMessage =
+                        responseData['error']?.toString() ??
+                        responseData['message']?.toString();
+
                     if (responseMessage != null) {
                       final lowerResponse = responseMessage.toLowerCase();
-                      if (lowerResponse.contains('locked') || 
+                      if (lowerResponse.contains('locked') ||
                           lowerResponse.contains('مغلق')) {
                         await _storageService.clearAllTokens();
                         if (kDebugMode) {
-                          debugPrint('Response after refresh indicates vendor locked');
+                          ('Response after refresh indicates vendor locked');
                         }
 
                         // Show message that management should unlock the vendor
@@ -239,14 +246,19 @@ class ApiService {
                               context: navigatorKey.currentContext!,
                               builder: (context) => AlertDialog(
                                 title: const Text('الحساب مغلق'),
-                                content: const Text('الحساب مغلق الآن، يرجى الاتصال بالادارة لفتح الحساب'),
+                                content: const Text(
+                                  'الحساب مغلق الآن، يرجى الاتصال بالادارة لفتح الحساب',
+                                ),
                                 actions: [
                                   TextButton(
                                     onPressed: () {
                                       Navigator.of(context).pop();
                                       // Navigate to login page after showing the message
                                       navigatorKey.currentState
-                                          ?.pushNamedAndRemoveUntil('/login', (route) => false);
+                                          ?.pushNamedAndRemoveUntil(
+                                            '/login',
+                                            (route) => false,
+                                          );
                                     },
                                     child: const Text('موافق'),
                                   ),
@@ -255,37 +267,41 @@ class ApiService {
                             );
                           } else {
                             // If context is not available, just navigate to login
-                            navigatorKey.currentState
-                                ?.pushNamedAndRemoveUntil('/login', (route) => false);
+                            navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                              '/login',
+                              (route) => false,
+                            );
                           }
                         });
-                        
+
                         handler.next(error);
                         return;
                       }
                     }
                   }
-                  
+
                   handler.resolve(response);
                   return;
                 } catch (retryError) {
                   // Check if the retry error indicates the vendor is locked
                   String? retryErrorMessage;
-                  if (retryError is DioException && 
+                  if (retryError is DioException &&
                       retryError.response?.data is Map<String, dynamic>) {
-                    final responseData = retryError.response!.data as Map<String, dynamic>;
-                    retryErrorMessage = responseData['error']?.toString() ?? 
-                                       responseData['message']?.toString();
+                    final responseData =
+                        retryError.response!.data as Map<String, dynamic>;
+                    retryErrorMessage =
+                        responseData['error']?.toString() ??
+                        responseData['message']?.toString();
                   }
-                  
+
                   // If retry also indicates vendor is locked
                   if (retryErrorMessage != null) {
                     final lowerError = retryErrorMessage.toLowerCase();
-                    if (lowerError.contains('locked') || 
+                    if (lowerError.contains('locked') ||
                         lowerError.contains('مغلق')) {
                       await _storageService.clearAllTokens();
                       if (kDebugMode) {
-                        debugPrint('Retry failed with vendor locked error');
+                        ('Retry failed with vendor locked error');
                       }
 
                       // Show message that management should unlock the vendor
@@ -295,14 +311,19 @@ class ApiService {
                             context: navigatorKey.currentContext!,
                             builder: (context) => AlertDialog(
                               title: const Text('الحساب مغلق'),
-                              content: const Text('الحساب مغلق الآن، يرجى الاتصال بالادارة لفتح الحساب'),
+                              content: const Text(
+                                'الحساب مغلق الآن، يرجى الاتصال بالادارة لفتح الحساب',
+                              ),
                               actions: [
                                 TextButton(
                                   onPressed: () {
                                     Navigator.of(context).pop();
                                     // Navigate to login page after showing the message
                                     navigatorKey.currentState
-                                        ?.pushNamedAndRemoveUntil('/login', (route) => false);
+                                        ?.pushNamedAndRemoveUntil(
+                                          '/login',
+                                          (route) => false,
+                                        );
                                   },
                                   child: const Text('موافق'),
                                 ),
@@ -311,32 +332,42 @@ class ApiService {
                           );
                         } else {
                           // If context is not available, just navigate to login
-                          navigatorKey.currentState
-                              ?.pushNamedAndRemoveUntil('/login', (route) => false);
+                          navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                            '/login',
+                            (route) => false,
+                          );
                         }
                       });
-                      
+
                       handler.next(error);
                       return;
                     }
                   }
-                  
-                  // If retry fails but not due to vendor being locked, continue with original error
+
+                  // If retry fails but not due to vendor being locked, surface
+                  // the retry's own error (its real backend message) rather
+                  // than falling through to the original pre-refresh error.
                   if (kDebugMode) {
-                    debugPrint('Retry failed: $retryError');
+                    ('Retry failed: $retryError');
+                  }
+                  if (retryError is DioException) {
+                    handler.next(retryError);
+                    return;
                   }
                 }
               } else {
                 // If refresh failed, clear tokens and navigate to login page
                 await _storageService.clearAllTokens();
                 if (kDebugMode) {
-                  debugPrint('Token refresh failed, redirecting to login...');
+                  ('Token refresh failed, redirecting to login...');
                 }
 
                 // Navigate to login page using the global navigator key
                 WidgetsBinding.instance.addPostFrameCallback((_) {
-                  navigatorKey.currentState
-                      ?.pushNamedAndRemoveUntil('/login', (route) => false);
+                  navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                    '/login',
+                    (route) => false,
+                  );
                 });
               }
             } else {
@@ -372,29 +403,28 @@ class ApiService {
       } else if (response.statusCode == 401 || response.statusCode == 400) {
         // Refresh token is invalid/expired - clear all tokens and force logout
         if (kDebugMode) {
-          debugPrint('Refresh token invalid/expired, clearing all tokens');
+          ('Refresh token invalid/expired, clearing all tokens');
         }
         await _storageService.clearAllTokens();
         return false;
       }
     } on DioException catch (e) {
       if (kDebugMode) {
-        debugPrint('Token refresh failed: $e');
+        ('Token refresh failed: $e');
       }
 
       // Check if it's a network error or token expired error
       if (e.response?.statusCode == 401 || e.response?.statusCode == 400) {
         // Refresh token is invalid/expired - clear all tokens and force logout
         if (kDebugMode) {
-          debugPrint(
-              'Refresh token invalid/expired (DioException), clearing all tokens');
+          ('Refresh token invalid/expired (DioException), clearing all tokens');
         }
         await _storageService.clearAllTokens();
         return false;
       }
     } catch (e) {
       if (kDebugMode) {
-        debugPrint('Token refresh failed: $e');
+        ('Token refresh failed: $e');
       }
     }
     return false;
@@ -493,10 +523,9 @@ class ApiService {
       final formData = FormData();
 
       // Add file
-      formData.files.add(MapEntry(
-        fieldName,
-        await MultipartFile.fromFile(file.path),
-      ));
+      formData.files.add(
+        MapEntry(fieldName, await MultipartFile.fromFile(file.path)),
+      );
 
       // Add other data
       if (data != null) {
@@ -509,11 +538,7 @@ class ApiService {
         endpoint,
         data: formData,
         onSendProgress: onSendProgress,
-        options: Options(
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        ),
+        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
       );
 
       return ApiResponse.fromResponse(response);
@@ -530,6 +555,7 @@ class ApiResponse<T> {
   final T? data;
   final String? message;
   final String? error;
+  final String? errorCode;
   final int? statusCode;
 
   ApiResponse({
@@ -537,6 +563,7 @@ class ApiResponse<T> {
     this.data,
     this.message,
     this.error,
+    this.errorCode,
     this.statusCode,
   });
 
@@ -551,6 +578,7 @@ class ApiResponse<T> {
           data: responseData['data'],
           message: responseData['message'],
           error: responseData['error'],
+          errorCode: responseData['errorCode']?.toString(),
           statusCode: response.statusCode,
         );
       } else {
@@ -572,6 +600,7 @@ class ApiResponse<T> {
 
   factory ApiResponse.fromError(DioException error) {
     String errorMessage = 'خطأ غير متوقع';
+    String? errorCode;
 
     if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout) {
@@ -583,19 +612,18 @@ class ApiResponse<T> {
       // Check for both 'message' and 'error' fields in the response
       errorMessage =
           responseData['error'] ?? responseData['message'] ?? errorMessage;
+      errorCode = responseData['errorCode']?.toString();
     }
 
     return ApiResponse(
       success: false,
       error: errorMessage,
+      errorCode: errorCode,
       statusCode: error.response?.statusCode,
     );
   }
 
   factory ApiResponse.fromException(dynamic exception) {
-    return ApiResponse(
-      success: false,
-      error: 'خطأ غير متوقع',
-    );
+    return ApiResponse(success: false, error: 'خطأ غير متوقع');
   }
 }

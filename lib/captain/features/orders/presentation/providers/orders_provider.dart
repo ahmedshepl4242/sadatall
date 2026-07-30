@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/order_model.dart';
 import '../../data/services/orders_service.dart';
@@ -57,13 +58,17 @@ class AvailableOrdersNotifier extends StateNotifier<AvailableOrdersState> {
   AvailableOrdersNotifier(this._ordersService)
     : super(const AvailableOrdersState());
 
-  Future<void> loadOrders({bool refresh = false}) async {
+  Future<void> loadOrders({bool refresh = false, bool silent = false}) async {
     if (!refresh && state.isLoading) return;
+
+    debugPrint('---->>>Getting refreshed current orders...${DateTime.now()} ');
 
     final isFirstPage = refresh || state.orders.isEmpty;
     final page = isFirstPage ? 1 : state.currentPage + 1;
 
-    state = state.copyWith(isLoading: true, error: null);
+    if (!silent) {
+      state = state.copyWith(isLoading: true, error: null);
+    }
 
     try {
       final newOrders = await _ordersService.getAvailableOrders(page: page);
@@ -162,10 +167,14 @@ class CurrentOrdersState {
 class CurrentOrdersNotifier extends StateNotifier<CurrentOrdersState> {
   final OrdersService _ordersService;
 
-  CurrentOrdersNotifier(this._ordersService) : super(const CurrentOrdersState());
+  CurrentOrdersNotifier(this._ordersService)
+    : super(const CurrentOrdersState());
 
-  Future<void> loadCurrentOrders() async {
-    state = state.copyWith(isLoading: true, error: null);
+  Future<void> loadCurrentOrders({bool silent = false}) async {
+    if (!silent) {
+      state = state.copyWith(isLoading: true, error: null);
+    }
+    //  getting refreshed orders
 
     try {
       final orders = await _ordersService.getCaptainOrders(
@@ -191,10 +200,7 @@ class CurrentOrdersNotifier extends StateNotifier<CurrentOrdersState> {
       final updatedOrders = state.orders
           .where((order) => order.id != orderId)
           .toList();
-      state = state.copyWith(
-        orders: updatedOrders,
-        processingOrderId: null,
-      );
+      state = state.copyWith(orders: updatedOrders, processingOrderId: null);
       return true;
     } catch (e) {
       state = state.copyWith(

@@ -81,7 +81,7 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
         await _requestPermission();
       }
     } catch (e) {
-      print('Error starting recording: $e');
+      ('Error starting recording: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -107,7 +107,7 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
         });
       }
     } catch (e) {
-      print('Error stopping recording: $e');
+      ('Error stopping recording: $e');
     }
   }
 
@@ -119,7 +119,7 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
         _isPaused = true;
       });
     } catch (e) {
-      print('Error pausing recording: $e');
+      ('Error pausing recording: $e');
     }
   }
 
@@ -131,7 +131,7 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
         _isPaused = false;
       });
     } catch (e) {
-      print('Error resuming recording: $e');
+      ('Error resuming recording: $e');
     }
   }
 
@@ -168,7 +168,7 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
           });
         });
       } catch (e) {
-        print('Error playing recording: $e');
+        ('Error playing recording: $e');
       }
     }
   }
@@ -180,7 +180,7 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
         _isPlaying = false;
       });
     } catch (e) {
-      print('Error stopping playback: $e');
+      ('Error stopping playback: $e');
     }
   }
 
@@ -209,9 +209,9 @@ class _VoiceRecorderWidgetState extends State<VoiceRecorderWidget> {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,

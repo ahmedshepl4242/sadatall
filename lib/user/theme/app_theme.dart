@@ -20,6 +20,14 @@ class AppTheme {
   static const Color borderColor = Color(0xFFCCECE9);
   static const Color dividerColor = Color(0xFFDDF2F0);
 
+  static const Color darkSurfaceColor = Color(0xFF1E1E1E);
+  static const Color darkBackgroundColor = Color(0xFF121212);
+  static const Color darkTextPrimary = Color(0xFFECECEC);
+  static const Color darkTextSecondary = Color(0xFFB0B0B0);
+  static const Color darkTextDisabled = Color(0xFF6E6E6E);
+  static const Color darkBorderColor = Color(0xFF3A3A3A);
+  static const Color darkDividerColor = Color(0xFF2C2C2C);
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
@@ -49,82 +57,122 @@ class AppTheme {
     );
   }
 
-  static TextTheme _getTextTheme() {
+  static ThemeData get darkTheme {
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryColor,
+        brightness: Brightness.dark,
+        primary: primaryColor,
+        onPrimary: Colors.white,
+        secondary: secondaryColor,
+        onSecondary: Colors.white,
+        surface: darkSurfaceColor,
+        error: errorColor,
+      ),
+      progressIndicatorTheme: const ProgressIndicatorThemeData(
+        color: primaryColor,
+      ),
+      textTheme: _getTextTheme(
+        primary: darkTextPrimary,
+        secondary: darkTextSecondary,
+      ),
+      appBarTheme: _getAppBarTheme(),
+      elevatedButtonTheme: _getElevatedButtonTheme(),
+      outlinedButtonTheme: _getOutlinedButtonTheme(),
+      textButtonTheme: _getTextButtonTheme(),
+      inputDecorationTheme: _getInputDecorationTheme(
+        fill: darkSurfaceColor,
+        border: darkBorderColor,
+        labelColor: darkTextSecondary,
+        hintColor: darkTextDisabled,
+      ),
+      dividerTheme: _getDividerTheme(darkDividerColor),
+      scaffoldBackgroundColor: darkBackgroundColor,
+      visualDensity: VisualDensity.adaptivePlatformDensity,
+    );
+  }
+
+  static TextTheme _getTextTheme({
+    Color primary = textPrimary,
+    Color secondary = textSecondary,
+  }) {
     return GoogleFonts.cairoTextTheme().copyWith(
       displayLarge: GoogleFonts.cairo(
         fontSize: 32,
         fontWeight: FontWeight.bold,
-        color: textPrimary,
+        color: primary,
       ),
       displayMedium: GoogleFonts.cairo(
         fontSize: 28,
         fontWeight: FontWeight.bold,
-        color: textPrimary,
+        color: primary,
       ),
       displaySmall: GoogleFonts.cairo(
         fontSize: 24,
         fontWeight: FontWeight.bold,
-        color: textPrimary,
+        color: primary,
       ),
       headlineLarge: GoogleFonts.cairo(
         fontSize: 22,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       headlineMedium: GoogleFonts.cairo(
         fontSize: 20,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       headlineSmall: GoogleFonts.cairo(
         fontSize: 18,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       titleLarge: GoogleFonts.cairo(
         fontSize: 16,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       titleMedium: GoogleFonts.cairo(
         fontSize: 14,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       titleSmall: GoogleFonts.cairo(
         fontSize: 12,
         fontWeight: FontWeight.w600,
-        color: textPrimary,
+        color: primary,
       ),
       bodyLarge: GoogleFonts.cairo(
         fontSize: 16,
         fontWeight: FontWeight.normal,
-        color: textPrimary,
+        color: primary,
       ),
       bodyMedium: GoogleFonts.cairo(
         fontSize: 14,
         fontWeight: FontWeight.normal,
-        color: textPrimary,
+        color: primary,
       ),
       bodySmall: GoogleFonts.cairo(
         fontSize: 12,
         fontWeight: FontWeight.normal,
-        color: textSecondary,
+        color: secondary,
       ),
       labelLarge: GoogleFonts.cairo(
         fontSize: 14,
         fontWeight: FontWeight.w500,
-        color: textPrimary,
+        color: primary,
       ),
       labelMedium: GoogleFonts.cairo(
         fontSize: 12,
         fontWeight: FontWeight.w500,
-        color: textPrimary,
+        color: primary,
       ),
       labelSmall: GoogleFonts.cairo(
         fontSize: 10,
         fontWeight: FontWeight.w500,
-        color: textSecondary,
+        color: secondary,
       ),
     );
   }
@@ -149,13 +197,8 @@ class AppTheme {
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: GoogleFonts.cairo(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w600),
         elevation: 2,
       ),
     );
@@ -166,14 +209,9 @@ class AppTheme {
       style: OutlinedButton.styleFrom(
         foregroundColor: primaryColor,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         side: const BorderSide(color: primaryColor, width: 1.5),
-        textStyle: GoogleFonts.cairo(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: GoogleFonts.cairo(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -183,25 +221,27 @@ class AppTheme {
       style: TextButton.styleFrom(
         foregroundColor: primaryColor,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        textStyle: GoogleFonts.cairo(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: GoogleFonts.cairo(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     );
   }
 
-  static InputDecorationTheme _getInputDecorationTheme() {
+  static InputDecorationTheme _getInputDecorationTheme({
+    Color fill = surfaceColor,
+    Color border = borderColor,
+    Color labelColor = textSecondary,
+    Color hintColor = textDisabled,
+  }) {
     return InputDecorationTheme(
       filled: true,
-      fillColor: surfaceColor,
+      fillColor: fill,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderColor),
+        borderSide: BorderSide(color: border),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: borderColor),
+        borderSide: BorderSide(color: border),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -216,18 +256,9 @@ class AppTheme {
         borderSide: const BorderSide(color: errorColor, width: 2),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      labelStyle: GoogleFonts.cairo(
-        color: textSecondary,
-        fontSize: 14,
-      ),
-      hintStyle: GoogleFonts.cairo(
-        color: textDisabled,
-        fontSize: 14,
-      ),
-      errorStyle: GoogleFonts.cairo(
-        color: errorColor,
-        fontSize: 12,
-      ),
+      labelStyle: GoogleFonts.cairo(color: labelColor, fontSize: 14),
+      hintStyle: GoogleFonts.cairo(color: hintColor, fontSize: 14),
+      errorStyle: GoogleFonts.cairo(color: errorColor, fontSize: 12),
     );
   }
 
@@ -236,18 +267,12 @@ class AppTheme {
       color: backgroundColor,
       shadowColor: Colors.black12,
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       margin: const EdgeInsets.all(8),
     );
   }
 
-  static DividerThemeData _getDividerTheme() {
-    return const DividerThemeData(
-      color: dividerColor,
-      thickness: 1,
-      space: 1,
-    );
+  static DividerThemeData _getDividerTheme([Color color = dividerColor]) {
+    return DividerThemeData(color: color, thickness: 1, space: 1);
   }
 }

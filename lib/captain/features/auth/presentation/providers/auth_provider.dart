@@ -108,7 +108,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           // Just log the error
           if (true) {
             // Always log for now
-            print('Failed to update FCM token during auth check: $e');
+            ('Failed to update FCM token during auth check: $e');
           }
         }
 
@@ -174,7 +174,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Just log the error
         if (true) {
           // Always log for now
-          print('Failed to update FCM token during login: $e');
+          ('Failed to update FCM token during login: $e');
         }
       }
 
@@ -263,7 +263,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         // Just log the error
         if (true) {
           // Always log for now
-          print('Failed to update FCM token during signup: $e');
+          ('Failed to update FCM token during signup: $e');
         }
       }
 
@@ -289,7 +289,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         await _notificationService.sendDummyTokenToServer();
       } catch (e) {
         // Don't prevent logout if FCM token update fails
-        print('Failed to send dummy FCM token during logout: $e');
+        ('Failed to send dummy FCM token during logout: $e');
       }
 
       // Stop location tracking

@@ -167,4 +167,13 @@ class StorageService {
   static const String keyIsFirstLaunch = 'is_first_launch';
   static const String keyLastLocationUpdate = 'last_location_update';
   static const String keyFcmToken = 'fcm_token';
+  static const String keyThemeMode = 'theme_mode';
+
+  Future<void> saveThemeMode(String themeMode) async {
+    await setString(keyThemeMode, themeMode);
+  }
+
+  Future<String?> getThemeMode() async {
+    return await getString(keyThemeMode);
+  }
 }

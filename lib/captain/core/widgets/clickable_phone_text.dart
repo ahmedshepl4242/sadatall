@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 
 /// A widget that displays text with clickable phone numbers.
 /// Phone numbers are automatically detected and highlighted.
+/// Tap to call, long-press to copy.
 class ClickablePhoneText extends StatelessWidget {
   final String text;
   final TextStyle? style;
@@ -35,7 +36,7 @@ class ClickablePhoneText extends StatelessWidget {
           decorationColor: AppColors.primary,
         );
 
-    final spans = _buildTextSpans(text, defaultStyle, defaultPhoneStyle);
+    final spans = _buildTextSpans(context, text, defaultStyle, defaultPhoneStyle);
 
     return RichText(
       text: TextSpan(children: spans),
@@ -43,6 +44,7 @@ class ClickablePhoneText extends StatelessWidget {
   }
 
   List<TextSpan> _buildTextSpans(
+    BuildContext context,
     String text,
     TextStyle normalStyle,
     TextStyle phoneStyle,
@@ -73,12 +75,27 @@ class ClickablePhoneText extends StatelessWidget {
         ));
       }
 
-      // Add the clickable phone number
+      // Add the clickable phone number: short tap to call, long press to copy.
+      // A single TapGestureRecognizer can't distinguish long-press, so track
+      // the press duration manually via onTapDown/onTapUp.
+      DateTime? pressStart;
       spans.add(TextSpan(
         text: phoneNumber,
         style: phoneStyle,
         recognizer: TapGestureRecognizer()
-          ..onTap = () => _makePhoneCall(phoneNumber),
+          ..onTapDown = (_) {
+            pressStart = DateTime.now();
+          }
+          ..onTapUp = (_) {
+            final start = pressStart;
+            final isLongPress = start != null &&
+                DateTime.now().difference(start) > const Duration(milliseconds: 450);
+            if (isLongPress) {
+              copyPhoneNumber(context, phoneNumber);
+            } else {
+              _makePhoneCall(phoneNumber);
+            }
+          },
       ));
 
       lastEnd = match.end;
@@ -105,7 +122,16 @@ class ClickablePhoneText extends StatelessWidget {
   }
 }
 
-/// A widget specifically for displaying a phone number field that is always clickable
+/// Copies [phoneNumber] to the clipboard and shows a confirmation snackbar.
+void copyPhoneNumber(BuildContext context, String phoneNumber) {
+  Clipboard.setData(ClipboardData(text: phoneNumber));
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('تم نسخ الرقم')),
+  );
+}
+
+/// A widget specifically for displaying a phone number field that is always
+/// clickable: tap to call, with an adjacent button to copy the number.
 class ClickablePhoneField extends StatelessWidget {
   final String phoneNumber;
   final TextStyle? style;
@@ -123,6 +149,7 @@ class ClickablePhoneField extends StatelessWidget {
       children: [
         GestureDetector(
           onTap: () => _makePhoneCall(phoneNumber),
+          onLongPress: () => copyPhoneNumber(context, phoneNumber),
           child: Text(
             phoneNumber,
             style: style ??
@@ -142,12 +169,7 @@ class ClickablePhoneField extends StatelessWidget {
             padding: EdgeInsets.zero,
             iconSize: 18,
             icon: const Icon(Icons.copy, color: AppColors.onSurfaceVariant),
-            onPressed: () {
-              Clipboard.setData(ClipboardData(text: phoneNumber));
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('تم نسخ الرقم')),
-              );
-            },
+            onPressed: () => copyPhoneNumber(context, phoneNumber),
           ),
         ),
       ],

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart'
-    hide ChangeNotifierProvider;
+    hide ChangeNotifierProvider, Consumer;
 import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -19,6 +19,7 @@ import 'mode_selector/mode_selector_screen.dart';
 
 // ── Captain imports ──────────────────────────────────────────────────────────
 import 'captain/core/theme/app_theme.dart' as captain_theme;
+import 'captain/core/providers/theme_provider.dart' as captain_theme_provider;
 import 'captain/core/services/notification_service.dart' as captain_notif;
 import 'captain/core/services/firebase_config_service.dart';
 import 'captain/features/auth/presentation/providers/auth_provider.dart'
@@ -31,6 +32,7 @@ import 'captain/main_navigation.dart';
 // ── Vendor imports ────────────────────────────────────────────────────────────
 import 'vendor/theme/app_theme.dart' as vendor_theme;
 import 'vendor/providers/auth_provider.dart' as vendor_auth;
+import 'vendor/providers/theme_provider.dart' as vendor_theme_provider;
 import 'vendor/services/api_service.dart';
 import 'vendor/services/notification_service.dart' as vendor_notif;
 import 'vendor/core/services/base_url_service.dart';
@@ -44,6 +46,7 @@ import 'vendor/utils/time_utils.dart';
 import 'user/theme/app_theme.dart' as user_theme;
 import 'user/providers/auth_provider.dart' as user_auth;
 import 'user/providers/time_provider.dart';
+import 'user/providers/theme_provider.dart' as user_theme_provider;
 import 'user/core/config/app_initialization_service.dart';
 import 'user/screens/auth/login_screen.dart' as user_login;
 import 'user/screens/auth/signup_screen.dart' as user_signup;
@@ -53,6 +56,11 @@ import 'user/screens/main_screen.dart' as user_main;
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 // Separate key for the mode selector so it never reuses a mode app's navigator state.
 final GlobalKey<NavigatorState> _modeSelectorNavigatorKey = GlobalKey<NavigatorState>();
+
+/// Root Riverpod container backing the whole widget tree (via
+/// UncontrolledProviderScope below). Lets services without a BuildContext
+/// (e.g. notification handlers) read/write the same providers the UI uses.
+final rootProviderContainer = ProviderContainer();
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SHARED FORCE-UPDATE HELPER
@@ -153,7 +161,12 @@ Future<void> main() async {
     await initializeAppMode(savedMode);
   }
 
-  runApp(ProviderScope(child: RootApp(initialMode: savedMode)));
+  runApp(
+    UncontrolledProviderScope(
+      container: rootProviderContainer,
+      child: RootApp(initialMode: savedMode),
+    ),
+  );
 }
 
 @pragma('vm:entry-point')
@@ -171,8 +184,10 @@ Future<void> _firebaseBackgroundHandler(RemoteMessage message) async {
 
 // Create provider instances once — never recreated on rebuild.
 final _vendorAuthProvider = vendor_auth.AuthProvider();
+final _vendorThemeProvider = vendor_theme_provider.ThemeProvider();
 final _userAuthProvider = user_auth.AuthProvider();
 final _timeProvider = TimeProvider();
+final _userThemeProvider = user_theme_provider.ThemeProvider();
 
 // Dedicated Riverpod container for captain — survives mode switches.
 final _captainContainer = ProviderContainer();
@@ -327,13 +342,16 @@ class _RootAppState extends State<RootApp> {
 // ─────────────────────────────────────────────────────────────────────────────
 // CAPTAIN APP
 // ─────────────────────────────────────────────────────────────────────────────
-class _CaptainApp extends StatelessWidget {
+class _CaptainApp extends ConsumerWidget {
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final themeMode = ref.watch(captain_theme_provider.themeModeProvider);
     return MaterialApp(
       navigatorKey: navigatorKey,
       title: 'تعالالي _T3alaly',
       theme: captain_theme.AppTheme.light,
+      darkTheme: captain_theme.AppTheme.dark,
+      themeMode: themeMode,
       home: const _CaptainAuthWrapper(),
       debugShowCheckedModeBanner: false,
       locale: const Locale('ar', 'EG'),
@@ -378,23 +396,29 @@ class _VendorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
-      providers: [ChangeNotifierProvider.value(value: _vendorAuthProvider)],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        title: 'تعالالي _T3alaly',
-        debugShowCheckedModeBanner: false,
-        theme: vendor_theme.AppTheme.lightTheme,
-        themeMode: ThemeMode.light,
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const vendor_splash.SplashScreen(),
-          '/login': (context) => const vendor_login.LoginScreen(),
-          '/signup': (context) => const vendor_signup.SignupScreen(),
-          '/main': (context) => const vendor_main.MainAppScreen(),
-          '/dashboard': (context) => const vendor_main.MainAppScreen(),
-        },
-        builder: (context, child) =>
-            Directionality(textDirection: TextDirection.rtl, child: child!),
+      providers: [
+        ChangeNotifierProvider.value(value: _vendorAuthProvider),
+        ChangeNotifierProvider.value(value: _vendorThemeProvider),
+      ],
+      child: Consumer<vendor_theme_provider.ThemeProvider>(
+        builder: (context, themeProvider, _) => MaterialApp(
+          navigatorKey: navigatorKey,
+          title: 'تعالالي _T3alaly',
+          debugShowCheckedModeBanner: false,
+          theme: vendor_theme.AppTheme.lightTheme,
+          darkTheme: vendor_theme.AppTheme.darkTheme,
+          themeMode: themeProvider.themeMode,
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const vendor_splash.SplashScreen(),
+            '/login': (context) => const vendor_login.LoginScreen(),
+            '/signup': (context) => const vendor_signup.SignupScreen(),
+            '/main': (context) => const vendor_main.MainAppScreen(),
+            '/dashboard': (context) => const vendor_main.MainAppScreen(),
+          },
+          builder: (context, child) =>
+              Directionality(textDirection: TextDirection.rtl, child: child!),
+        ),
       ),
     );
   }
@@ -410,29 +434,33 @@ class _UserApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider.value(value: _userAuthProvider),
         ChangeNotifierProvider.value(value: _timeProvider),
+        ChangeNotifierProvider.value(value: _userThemeProvider),
       ],
-      child: MaterialApp(
-        navigatorKey: navigatorKey,
-        title: 'تعالالي _T3alaly',
-        debugShowCheckedModeBanner: false,
-        theme: user_theme.AppTheme.lightTheme,
-        themeMode: ThemeMode.light,
-        supportedLocales: const [Locale('ar', 'SA'), Locale('en', 'US')],
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        initialRoute: '/',
-        routes: {
-          '/': (context) => const user_splash.SplashScreen(),
-          '/login': (context) => const user_login.LoginScreen(),
-          '/signup': (context) => const user_signup.SignupScreen(),
-          '/main': (context) => const user_main.MainScreen(),
-          '/dashboard': (context) => const user_main.MainScreen(),
-        },
-        builder: (context, child) =>
-            Directionality(textDirection: TextDirection.rtl, child: child!),
+      child: Consumer<user_theme_provider.ThemeProvider>(
+        builder: (context, themeProvider, _) => MaterialApp(
+          navigatorKey: navigatorKey,
+          title: 'تعالالي _T3alaly',
+          debugShowCheckedModeBanner: false,
+          theme: user_theme.AppTheme.lightTheme,
+          darkTheme: user_theme.AppTheme.darkTheme,
+          themeMode: themeProvider.themeMode,
+          supportedLocales: const [Locale('ar', 'SA'), Locale('en', 'US')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          initialRoute: '/',
+          routes: {
+            '/': (context) => const user_splash.SplashScreen(),
+            '/login': (context) => const user_login.LoginScreen(),
+            '/signup': (context) => const user_signup.SignupScreen(),
+            '/main': (context) => const user_main.MainScreen(),
+            '/dashboard': (context) => const user_main.MainScreen(),
+          },
+          builder: (context, child) =>
+              Directionality(textDirection: TextDirection.rtl, child: child!),
+        ),
       ),
     );
   }

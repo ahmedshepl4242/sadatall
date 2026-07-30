@@ -9,20 +9,20 @@ class BaseUrlService {
   
   static Future<void> initializeBaseUrl() async {
     if (!_initialized) {
-      print('BaseUrlService: Starting initialization...');
+      ('BaseUrlService: Starting initialization...');
       // Fetch the base URL from Firestore
       final fetchedBaseUrl = await ApiConfig.fetchBaseUrl();
       
       if (fetchedBaseUrl != null && fetchedBaseUrl.isNotEmpty) {
         _baseUrl = fetchedBaseUrl;
         _initialized = true;
-        print('BaseUrlService: Successfully initialized with fetched URL: $fetchedBaseUrl');
+        ('BaseUrlService: Successfully initialized with fetched URL: $fetchedBaseUrl');
       } else {
-        print('BaseUrlService: Failed to fetch URL, using default: ${AppConstants.baseUrl}');
+        ('BaseUrlService: Failed to fetch URL, using default: ${AppConstants.baseUrl}');
         // If fetching fails, it will continue using the default from AppConstants
       }
     } else {
-      print('BaseUrlService: Already initialized with URL: $_baseUrl');
+      ('BaseUrlService: Already initialized with URL: $_baseUrl');
     }
   }
   

@@ -46,34 +46,32 @@ class WasabiService {
         objectName,
         stream,
         size: bytes.length,
-        metadata: {
-          'Content-Type': contentType,
-        },
+        metadata: {'Content-Type': contentType},
       );
-      
+
       // Verify upload by checking if object exists
       bool exists = false;
       try {
         await _client.statObject(AppConstants.wasabiBucket, objectName);
         exists = true;
-        print('✅ Upload verified - file exists: $objectName');
+        ('✅ Upload verified - file exists: $objectName');
       } catch (e) {
-        print('⚠️ Could not verify upload: $e');
+        ('⚠️ Could not verify upload: $e');
         // Even if verification fails, the upload might have succeeded
         // Return the path anyway since putObject completed
         exists = etag != null;
       }
 
       if (exists) {
-        print('Upload succeeded!');
-        print('ETag: $etag');
+        ('Upload succeeded!');
+        ('ETag: $etag');
       } else {
-        print('Upload may have failed - no ETag returned');
+        ('Upload may have failed - no ETag returned');
       }
 
       return objectName;
     } catch (e) {
-      print('❌ Error uploading file: $e');
+      ('❌ Error uploading file: $e');
       return null;
     }
   }

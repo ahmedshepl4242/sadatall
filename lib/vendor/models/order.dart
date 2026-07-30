@@ -12,6 +12,7 @@ class Order {
   final String? additionalNotes;
   final double? price;
   final double? deliveryPrice;
+  final int? waitingTime;
   final String userAddress;
   final String phoneNumber;
   final int neighborhoodId;
@@ -33,6 +34,7 @@ class Order {
     this.additionalNotes,
     this.price,
     this.deliveryPrice,
+    this.waitingTime,
     required this.userAddress,
     required this.phoneNumber,
     required this.neighborhoodId,
@@ -47,6 +49,10 @@ class Order {
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
+    // print('Parsing Order from JSON: $json'); // Debugging line
+    final parsedPrice = json['price'] is num
+        ? (json['price'] as num).toDouble()
+        : double.tryParse(json['price']?.toString() ?? '');
     return Order(
       id: json['id'] is num
           ? (json['id'] as num).toInt()
@@ -60,12 +66,17 @@ class Order {
       status: json['status']?.toString() ?? '',
       description: json['description']?.toString() ?? '',
       additionalNotes: json['additionalNotes']?.toString(),
-      price: json['price'] is num
-          ? (json['price'] as num).toDouble()
-          : double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+
+      price: (parsedPrice != null && parsedPrice > 0)
+          ? parsedPrice
+          : parseEstimatedItemsPrice(json['description']?.toString() ?? ''),
+
       deliveryPrice: json['deliveryPrice'] is num
           ? (json['deliveryPrice'] as num).toDouble()
           : double.tryParse(json['deliveryPrice']?.toString() ?? '0') ?? 0.0,
+      waitingTime: json['waitingTime'] is num
+          ? (json['waitingTime'] as num).toInt()
+          : int.tryParse(json['waitingTime']?.toString() ?? ''),
       userAddress: json['userAddress']?.toString() ?? '',
       phoneNumber: json['phoneNumber']?.toString() ?? '',
       neighborhoodId: json['neighborhoodId'] is num
@@ -82,16 +93,18 @@ class Order {
           : null,
       orderItems: json['orderItems'] != null
           ? (json['orderItems'] as List)
-              .map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
-              .toList()
+                .map((item) => OrderItem.fromJson(item as Map<String, dynamic>))
+                .toList()
           : null,
       captain: json['captain'] != null
           ? Captain.fromJson(json['captain'] as Map<String, dynamic>)
           : null,
       attachments: json['attachments'] != null
           ? (json['attachments'] as List)
-              .map((item) => Attachment.fromJson(item as Map<String, dynamic>))
-              .toList()
+                .map(
+                  (item) => Attachment.fromJson(item as Map<String, dynamic>),
+                )
+                .toList()
           : null,
       createdAt: json['createdAt'] != null
           ? TimeUtils.toCairoTime(DateTime.parse(json['createdAt'].toString()))
@@ -112,6 +125,7 @@ class Order {
       'additionalNotes': additionalNotes,
       'price': price,
       'deliveryPrice': deliveryPrice,
+      'waitingTime': waitingTime,
       'userAddress': userAddress,
       'phoneNumber': phoneNumber,
       'neighborhoodId': neighborhoodId,
@@ -134,6 +148,7 @@ class Order {
     String? additionalNotes,
     double? price,
     double? deliveryPrice,
+    int? waitingTime,
     String? userAddress,
     String? phoneNumber,
     int? neighborhoodId,
@@ -154,6 +169,7 @@ class Order {
       additionalNotes: additionalNotes ?? this.additionalNotes,
       price: price ?? this.price,
       deliveryPrice: deliveryPrice ?? this.deliveryPrice,
+      waitingTime: waitingTime ?? this.waitingTime,
       userAddress: userAddress ?? this.userAddress,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       neighborhoodId: neighborhoodId ?? this.neighborhoodId,
@@ -183,15 +199,67 @@ class Order {
   // Helper method to get the total price (price + deliveryPrice)
   // Returns null if either price or deliveryPrice is null or zero
   double? get totalPrice {
-    if (price == null || deliveryPrice == null || price == 0 || deliveryPrice == 0) {
+    if (price == null ||
+        deliveryPrice == null ||
+        price == 0 ||
+        deliveryPrice == 0) {
       return null;
     }
     return price! + deliveryPrice!;
   }
 
+  double? get estimatedItemsPriceFromDescription =>
+      parseEstimatedItemsPrice(description);
   // Helper method to check if any price values are null or zero
   bool get hasNullPrices {
-    return price == null || deliveryPrice == null || price == 0 || deliveryPrice == 0;
+    return price == null ||
+        deliveryPrice == null ||
+        price == 0 ||
+        deliveryPrice == 0;
+  }
+
+  // Orders placed from the user's cart embed the items total as text at the
+  // end of the description (format: "...\n-----\nالإجمالي: 123 ج.م") since
+  // there is no structured price on the order until the vendor sets one via
+  // a counter offer / direct accept. Use this to show a meaningful price
+  // instead of "0" while the order is still awaiting a vendor-set price.
+  static double? parseEstimatedItemsPrice(String description) {
+    if (description.isEmpty) return null;
+
+    final lines = description.trim().split('\n');
+    if (lines.isEmpty) return null;
+
+    final lastLine = lines.last.trim();
+
+    if (!lastLine.startsWith('الإجمالي:') || !lastLine.contains('ج.م')) {
+      return null;
+    }
+
+    final priceString = lastLine
+        .replaceAll('الإجمالي:', '')
+        .replaceAll('ج.م', '')
+        .trim();
+
+    return double.tryParse(priceString);
+  }
+
+  // Best-effort display price: the vendor-set price if present, otherwise
+  // the items total parsed from the description (see above), otherwise null.
+  double? get displayPrice {
+    if (price != null && price != 0) return price;
+
+    return estimatedItemsPriceFromDescription;
+  }
+
+  // Text summary of the delivery route: from the vendor's neighborhood/address
+  // to the order's destination neighborhood. Only meaningful when the order
+  // has a real vendor (not a special order, vendorId == -1).
+  String? get routeLabel {
+    if (vendorId == -1 || vendor == null) return null;
+    final vendorLocation = vendor!.neighborhoodName ?? vendor!.address;
+    final destination = neighborhood?.name;
+    if (destination == null) return null;
+    return 'من $vendorLocation إلى $destination';
   }
 }
 
@@ -200,11 +268,7 @@ class User {
   final String name;
   final String phone;
 
-  User({
-    required this.id,
-    required this.name,
-    required this.phone,
-  });
+  User({required this.id, required this.name, required this.phone});
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
@@ -217,11 +281,7 @@ class User {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'phone': phone,
-    };
+    return {'id': id, 'name': name, 'phone': phone};
   }
 }
 
@@ -229,10 +289,7 @@ class OrderVendor {
   final int id;
   final String vendorName;
 
-  OrderVendor({
-    required this.id,
-    required this.vendorName,
-  });
+  OrderVendor({required this.id, required this.vendorName});
 
   factory OrderVendor.fromJson(Map<String, dynamic> json) {
     return OrderVendor(
@@ -244,10 +301,7 @@ class OrderVendor {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'vendorName': vendorName,
-    };
+    return {'id': id, 'vendorName': vendorName};
   }
 }
 
@@ -255,10 +309,7 @@ class Neighborhood {
   final int id;
   final String name;
 
-  Neighborhood({
-    required this.id,
-    required this.name,
-  });
+  Neighborhood({required this.id, required this.name});
 
   factory Neighborhood.fromJson(Map<String, dynamic> json) {
     return Neighborhood(
@@ -270,10 +321,7 @@ class Neighborhood {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-    };
+    return {'id': id, 'name': name};
   }
 }
 
@@ -332,11 +380,7 @@ class MenuItemInfo {
   final String name;
   final String? photoUrl;
 
-  MenuItemInfo({
-    required this.id,
-    required this.name,
-    this.photoUrl,
-  });
+  MenuItemInfo({required this.id, required this.name, this.photoUrl});
 
   factory MenuItemInfo.fromJson(Map<String, dynamic> json) {
     return MenuItemInfo(
@@ -349,11 +393,7 @@ class MenuItemInfo {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'photoUrl': photoUrl,
-    };
+    return {'id': id, 'name': name, 'photoUrl': photoUrl};
   }
 }
 
@@ -388,12 +428,7 @@ class OrdersPagination {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'page': page,
-      'limit': limit,
-      'total': total,
-      'pages': pages,
-    };
+    return {'page': page, 'limit': limit, 'total': total, 'pages': pages};
   }
 }
 
@@ -407,13 +442,13 @@ class OrderStatus {
   static const String cancelled = 'CANCELLED';
 
   static List<String> get allStatuses => [
-        pending,
-        counterOfferSent,
-        counterOfferAccepted,
-        acceptedByCaptain,
-        delivered,
-        cancelled,
-      ];
+    pending,
+    counterOfferSent,
+    counterOfferAccepted,
+    acceptedByCaptain,
+    delivered,
+    cancelled,
+  ];
 
   static String getStatusDisplayName(String status) {
     switch (status) {
@@ -461,8 +496,9 @@ class Captain {
       id: json['id']?.toString() ?? '',
       userName: json['userName']?.toString() ?? '',
       phoneNumber: json['phoneNumber']?.toString() ?? '',
-      latitude:
-          json['latitude'] is num ? (json['latitude'] as num).toDouble() : null,
+      latitude: json['latitude'] is num
+          ? (json['latitude'] as num).toDouble()
+          : null,
       longitude: json['longitude'] is num
           ? (json['longitude'] as num).toDouble()
           : null,

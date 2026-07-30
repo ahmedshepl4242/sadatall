@@ -537,20 +537,20 @@
 //       for (String urlString in mapUrls) {
 //         try {
 //           final uri = Uri.parse(urlString);
-//           print('Trying to launch: $urlString');
+//           ('Trying to launch: $urlString');
           
 //           if (await canLaunchUrl(uri)) {
-//             print('canLaunchUrl returned true for: $urlString');
+//             ('canLaunchUrl returned true for: $urlString');
 //             await launchUrl(uri, mode: LaunchMode.externalApplication);
 //             launched = true;
-//             print('Successfully launched: $urlString');
+//             ('Successfully launched: $urlString');
 //             break;
 //           } else {
-//             print('canLaunchUrl returned false for: $urlString');
+//             ('canLaunchUrl returned false for: $urlString');
 //           }
 //         } catch (e) {
 //           lastError = e.toString();
-//           print('Error with URL $urlString: $e');
+//           ('Error with URL $urlString: $e');
 //         }
 //       }
 
@@ -564,7 +564,7 @@
 //         );
 //       }
 //     } catch (e) {
-//       print('General error in _showLocationOnMap: $e');
+//       ('General error in _showLocationOnMap: $e');
 //       if (mounted) {
 //         ScaffoldMessenger.of(context).showSnackBar(
 //           SnackBar(

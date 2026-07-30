@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -8,7 +9,9 @@ import '../../../../core/utils/app_utils.dart';
 import '../../../../core/utils/validators.dart';
 import '../../data/models/order_model.dart';
 import '../providers/orders_provider.dart';
-import 'special_order_details_screen.dart';
+import '../widgets/order_attachments_widget.dart';
+import '../../../../core/widgets/clickable_phone_text.dart';
+import '../../../../main_navigation.dart';
 
 class AvailableOrdersScreen extends ConsumerStatefulWidget {
   const AvailableOrdersScreen({Key? key}) : super(key: key);
@@ -20,22 +23,31 @@ class AvailableOrdersScreen extends ConsumerStatefulWidget {
 
 class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
   final ScrollController _scrollController = ScrollController();
+  Timer? _timer;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
-    // Load orders only if there are no existing orders
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final currentState = ref.read(availableOrdersProvider);
       if (currentState.orders.isEmpty && !currentState.isLoading) {
         ref.read(availableOrdersProvider.notifier).loadOrders();
       }
     });
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!mounted) return;
+      final state = ref.read(availableOrdersProvider);
+      if (state.isAccepting) return;
+      ref
+          .read(availableOrdersProvider.notifier)
+          .loadOrders(refresh: true, silent: true);
+    });
   }
 
   @override
   void dispose() {
+    _timer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -127,9 +139,9 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
     AvailableOrdersState ordersState,
   ) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(10.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -140,23 +152,33 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
                   children: [
                     Text(
                       'رقم الطلب: #${order.id}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: const TextStyle(
+                        fontSize: 13,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     if (order.vendorId == '-1') ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.warning.withOpacity(0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                          border: Border.all(
+                            color: AppColors.warning.withOpacity(0.3),
+                          ),
                         ),
                         child: const Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.star, size: 12, color: AppColors.warning),
+                            Icon(
+                              Icons.star,
+                              size: 12,
+                              color: AppColors.warning,
+                            ),
                             SizedBox(width: 4),
                             Text(
                               'طلب خاص',
@@ -175,26 +197,28 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
                 if (order.deliveryPrice != null)
                   Text(
                     AppUtils.formatPrice(order.deliveryPrice!),
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    style: const TextStyle(
+                      fontSize: 13,
                       color: AppColors.primary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Row(
               children: [
                 const Icon(
                   Icons.store,
-                  size: 16,
+                  size: 13,
                   color: AppColors.onSurfaceVariant,
                 ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     order.vendorName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    style: const TextStyle(
+                      fontSize: 12,
                       fontWeight: FontWeight.w600,
                     ),
                     maxLines: 1,
@@ -203,19 +227,20 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Row(
               children: [
                 const Icon(
                   Icons.location_on,
-                  size: 16,
+                  size: 13,
                   color: AppColors.onSurfaceVariant,
                 ),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     '${order.neighborhood?.name ?? ''} - ${order.userAddress}',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    style: const TextStyle(
+                      fontSize: 11,
                       color: AppColors.onSurfaceVariant,
                     ),
                     maxLines: 2,
@@ -224,54 +249,85 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
             Row(
               children: [
                 const Icon(
                   Icons.access_time,
-                  size: 16,
+                  size: 13,
                   color: AppColors.onSurfaceVariant,
                 ),
                 const SizedBox(width: 4),
                 Text(
                   AppUtils.timeAgo(order.createdAt),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  style: const TextStyle(
+                    fontSize: 11,
                     color: AppColors.onSurfaceVariant,
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: CustomButton(
-                    text: 'عرض التفاصيل',
-                    onPressed: () {
-                      _showOrderDetails(context, order);
+            const Divider(height: 16),
+            if (order.description.isNotEmpty)
+              _buildDetailRowWithClickablePhones('وصف الطلب:', order.description),
+            if (order.vendor != null && order.vendorId != '-1')
+              _buildPhoneRow('رقم المتجر:', order.vendor!.contactNumber),
+            _buildPhoneRow('رقم الهاتف:', order.phoneNumber),
+            if (order.price != null)
+              _buildDetailRow('سعر الطلب:', AppUtils.formatPrice(order.price!)),
+            if (order.waitingTime != null)
+              _buildDetailRow(
+                'الوقت التقديري:',
+                '${order.waitingTime} دقيقة',
+              ),
+            if (order.routeLabel != null)
+              _buildDetailRow('المسار:', order.routeLabel!),
+            if (order.additionalNotes != null &&
+                order.additionalNotes!.isNotEmpty)
+              _buildDetailRowWithClickablePhones('ملاحظات:', order.additionalNotes!),
+            if (order.attachments != null && order.attachments!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              OrderAttachmentsWidget(attachments: order.attachments!),
+            ],
+            if (order.userLatitude != null && order.userLongitude != null) ...[
+              const SizedBox(height: 4),
+              GestureDetector(
+                onTap: () =>
+                    _openInMaps(order.userLatitude!, order.userLongitude!),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.map_outlined,
+                      size: 16,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'عرض الموقع على الخريطة',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.primary,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            const SizedBox(height: 8),
+            CustomButton(
+              text: 'قبول الطلب',
+              onPressed:
+                  ordersState.isAccepting &&
+                      ordersState.acceptingOrderId == order.id
+                  ? null
+                  : () {
+                      _acceptOrder(context, order);
                     },
-                    type: ButtonType.outlined,
-                    height: 40,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: CustomButton(
-                    text: 'قبول الطلب',
-                    onPressed:
-                        ordersState.isAccepting &&
-                            ordersState.acceptingOrderId == order.id
-                        ? null
-                        : () {
-                            _acceptOrder(context, order);
-                          },
-                    isLoading:
-                        ordersState.isAccepting &&
-                        ordersState.acceptingOrderId == order.id,
-                    height: 40,
-                  ),
-                ),
-              ],
+              isLoading:
+                  ordersState.isAccepting &&
+                  ordersState.acceptingOrderId == order.id,
+              height: 34,
             ),
           ],
         ),
@@ -279,146 +335,52 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
     );
   }
 
-  void _showOrderDetails(BuildContext context, OrderModel order) {
-    // For special orders (vendorId == -1), navigate to dedicated screen
-    if (order.vendorId == '-1') {
-      Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (context) => SpecialOrderDetailsScreen(order: order),
-        ),
-      );
-      return;
-    }
-
-    // For normal orders, show bottom sheet
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.8,
-        maxChildSize: 0.95,
-        minChildSize: 0.6,
-        expand: false,
-        builder: (context, scrollController) {
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.onSurfaceVariant,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'تفاصيل الطلب',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: 16),
-                Expanded(
-                  child: SingleChildScrollView(
-                    controller: scrollController,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildDetailRow('رقم الطلب:', '#${order.id}'),
-                        _buildDetailRow('وصف الطلب', order.description),
-                        _buildDetailRow('المطعم/المتجر:', order.vendorName),
-                        _buildDetailRow('رقم المطعم/المتجر:', order.vendor!.contactNumber),
-                        _buildDetailRow(
-                          'الحي:',
-                          order.neighborhood?.name ?? 'غير محدد',
-                        ),
-                        if (order.user != null)
-                          _buildDetailRow('اسم العميل:', order.user!.userName),
-                        _buildDetailRow('عنوان العميل:', order.userAddress),
-                        _buildDetailRow('رقم الهاتف:', order.phoneNumber),
-                        if (order.price != null)
-                          _buildDetailRow(
-                            'سعر الطلب:',
-                            AppUtils.formatPrice(order.price!),
-                          ),
-                        if (order.deliveryPrice != null)
-                          _buildDetailRow(
-                            'سعر التوصيل:',
-                            AppUtils.formatPrice(order.deliveryPrice!),
-                          ),
-                        _buildDetailRow(
-                          'حالة الطلب:',
-                          _getStatusText(order.status),
-                        ),
-                        _buildDetailRow(
-                          'وقت الطلب:',
-                          AppUtils.formatDateTime(order.createdAt.toLocal()),
-                        ),
-                        if (order.additionalNotes != null &&
-                            order.additionalNotes!.isNotEmpty)
-                          _buildDetailRow('ملاحظات:', order.additionalNotes!),
-                        const SizedBox(height: 16),
-                        if (order.userLatitude != null &&
-                            order.userLongitude != null)
-                          CustomButton(
-                            text: 'عرض الموقع على الخريطة',
-                            onPressed: () {
-                              _openInMaps(
-                                order.userLatitude!,
-                                order.userLongitude!,
-                              );
-                            },
-                            type: ButtonType.outlined,
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Consumer(
-                  builder: (context, ref, child) {
-                    final ordersState = ref.watch(availableOrdersProvider);
-                    return CustomButton(
-                      text: 'قبول الطلب',
-                      onPressed:
-                          ordersState.isAccepting &&
-                              ordersState.acceptingOrderId == order.id
-                          ? null
-                          : () {
-                              Navigator.of(context).pop();
-                              _acceptOrder(context, order);
-                            },
-                      isLoading:
-                          ordersState.isAccepting &&
-                          ordersState.acceptingOrderId == order.id,
-                    );
-                  },
-                ),
-              ],
+  Widget _buildPhoneRow(String label, String phoneNumber) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 85,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurfaceVariant,
+              ),
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: ClickablePhoneField(
+              phoneNumber: phoneNumber,
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+                decorationColor: AppColors.primary,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 6.0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 100,
+            width: 85,
             child: Text(
               label,
               style: const TextStyle(
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: AppColors.onSurfaceVariant,
               ),
@@ -427,9 +389,37 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(color: AppColors.onSurface),
+              style: const TextStyle(fontSize: 11, color: AppColors.onSurface),
               softWrap: true,
               overflow: TextOverflow.visible,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRowWithClickablePhones(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 85,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
+          ),
+          Expanded(
+            child: ClickablePhoneText(
+              text: value,
+              style: const TextStyle(fontSize: 11, color: AppColors.onSurface),
             ),
           ),
         ],
@@ -452,9 +442,7 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text('قبول الطلب'),
-          content: Text(
-            'هل تريد قبول طلب #${order.id}؟.',
-          ),
+          content: Text('هل تريد قبول طلب #${order.id}؟.'),
           actions: [
             TextButton(
               child: const Text('إلغاء'),
@@ -473,6 +461,7 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
                 if (!mounted) return;
 
                 if (success) {
+                  ref.read(switchToCurrentOrderTab)?.call();
                   ScaffoldMessenger.of(parentContext).showSnackBar(
                     SnackBar(
                       content: const Row(
@@ -549,7 +538,9 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
                   label: 'سعر التوصيل',
                   hint: 'أدخل سعر التوصيل',
                   controller: priceController,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                   prefixIcon: const Icon(Icons.attach_money),
                   validator: Validators.deliveryPrice,
                 ),
@@ -566,59 +557,79 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
             Consumer(
               builder: (context, dialogRef, child) {
                 final state = dialogRef.watch(availableOrdersProvider);
-                final isLoading = state.isAccepting && state.acceptingOrderId == order.id;
+                final isLoading =
+                    state.isAccepting && state.acceptingOrderId == order.id;
                 return TextButton(
-                  onPressed: isLoading ? null : () async {
-                    if (!formKey.currentState!.validate()) {
-                      return;
-                    }
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          if (!formKey.currentState!.validate()) {
+                            return;
+                          }
 
-                    final deliveryPrice = double.tryParse(priceController.text);
-                    if (deliveryPrice == null || deliveryPrice <= 0) {
-                      return;
-                    }
+                          final deliveryPrice = double.tryParse(
+                            priceController.text,
+                          );
+                          if (deliveryPrice == null || deliveryPrice <= 0) {
+                            return;
+                          }
 
-                    final notifier = dialogRef.read(availableOrdersProvider.notifier);
-                    Navigator.of(dialogContext).pop();
+                          final notifier = dialogRef.read(
+                            availableOrdersProvider.notifier,
+                          );
+                          Navigator.of(dialogContext).pop();
 
-                    final success = await notifier
-                        .acceptOrder(order.id, deliveryPrice: deliveryPrice);
+                          final success = await notifier.acceptOrder(
+                            order.id,
+                            deliveryPrice: deliveryPrice,
+                          );
 
-                    if (!mounted) return;
+                          if (!mounted) return;
 
-                    if (success) {
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
-                        SnackBar(
-                          content: const Row(
-                            children: [
-                              Icon(Icons.check_circle, color: Colors.white),
-                              SizedBox(width: 8),
-                              Text('تم قبول الطلب بنجاح'),
-                            ],
-                          ),
-                          backgroundColor: Colors.green,
-                          duration: const Duration(seconds: 4),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    } else {
-                      final error = ref.read(availableOrdersProvider).error;
-                      ScaffoldMessenger.of(parentContext).showSnackBar(
-                        SnackBar(
-                          content: Row(
-                            children: [
-                              const Icon(Icons.error, color: Colors.white),
-                              const SizedBox(width: 8),
-                              Expanded(child: Text(error ?? 'فشل في قبول الطلب')),
-                            ],
-                          ),
-                          backgroundColor: Colors.red,
-                          duration: const Duration(seconds: 4),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    }
-                  },
+                          if (success) {
+                            ref.read(switchToCurrentOrderTab)?.call();
+                            ScaffoldMessenger.of(parentContext).showSnackBar(
+                              SnackBar(
+                                content: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text('تم قبول الطلب بنجاح'),
+                                  ],
+                                ),
+                                backgroundColor: Colors.green,
+                                duration: const Duration(seconds: 4),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          } else {
+                            final error = ref
+                                .read(availableOrdersProvider)
+                                .error;
+                            ScaffoldMessenger.of(parentContext).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.error,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(error ?? 'فشل في قبول الطلب'),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: Colors.red,
+                                duration: const Duration(seconds: 4),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        },
                   child: isLoading
                       ? const SizedBox(
                           width: 20,
@@ -633,23 +644,6 @@ class _AvailableOrdersScreenState extends ConsumerState<AvailableOrdersScreen> {
         );
       },
     );
-  }
-
-  String _getStatusText(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return 'في انتظار الموافقة';
-      case OrderStatus.counterOfferSent:
-        return 'عرض مضاد مُرسل';
-      case OrderStatus.counterOfferAccepted:
-        return 'عرض مضاد مقبول';
-      case OrderStatus.acceptedByCaptain:
-        return 'مقبول من الكابتن';
-      case OrderStatus.delivered:
-        return 'تم التوصيل';
-      case OrderStatus.cancelled:
-        return 'ملغي';
-    }
   }
 
   void _openInMaps(double lat, double lng) async {

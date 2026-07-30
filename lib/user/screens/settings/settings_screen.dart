@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:sadat_delivery_merged/app_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
 import '../../screens/complaints/complaints_screen.dart';
 import '../profile/profile_screen.dart';
 
@@ -107,7 +108,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
           'الإعدادات',
@@ -121,6 +121,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           children: [
             _buildProfileSection(),
+            const SizedBox(height: 16),
+            _buildAppearanceSection(),
             const SizedBox(height: 16),
             _buildDataSection(),
             const SizedBox(height: 16),
@@ -237,6 +239,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
   //     ),
   //   );
   // }
+
+  Widget _buildAppearanceSection() {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'المظهر',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                themeProvider.isDarkMode ? Icons.dark_mode : Icons.light_mode,
+                color: Colors.grey[700],
+              ),
+              title: const Text(
+                'الوضع الليلي',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                'تفعيل المظهر الداكن للتطبيق',
+                style: TextStyle(fontSize: 14),
+              ),
+              value: themeProvider.isDarkMode,
+              onChanged: (value) => themeProvider.setDarkMode(value),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildDataSection() {
     return Card(

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/order.dart';
 import '../../services/order_service.dart';
 import '../../services/captain_service.dart';
+import '../../services/neighborhood_service.dart' show NeighborhoodService;
 import 'counter_offer_screen.dart';
 import '../../utils/time_utils.dart';
 import '../../widgets/attachments/attachment_display_widget.dart';
@@ -20,15 +22,43 @@ class OrderDetailsScreen extends StatefulWidget {
 class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   final OrderService _orderService = OrderService();
   final CaptainService _captainService = CaptainService();
+  final NeighborhoodService _neighborhoodService = NeighborhoodService();
   late Order _order;
   bool _isLoading = false;
   CaptainStats? _captainStats;
+  String? _fallbackNeighborhoodName;
 
   @override
   void initState() {
     super.initState();
     _order = widget.order;
+
     // _loadCaptainStats();
+
+    // The order's neighborhood relation may be missing on the object handed
+    // to this screen (e.g. an older client build, or a response that didn't
+    // include it) even though neighborhoodId is always present. Resolve the
+    // name from the full neighborhoods list as a fallback so it still shows.
+    if (_order.neighborhood == null && _order.neighborhoodId != 0) {
+      _loadFallbackNeighborhoodName();
+    }
+  }
+
+  String? get _neighborhoodName =>
+      _order.neighborhood?.name ?? _fallbackNeighborhoodName;
+
+  Future<void> _loadFallbackNeighborhoodName() async {
+    final response = await _neighborhoodService.getNeighborhoods();
+    if (!mounted || !response.success || response.data == null) return;
+
+    final match = response.data!.where(
+      (n) => n.id == _order.neighborhoodId.toString(),
+    );
+    if (match.isNotEmpty) {
+      setState(() {
+        _fallbackNeighborhoodName = match.first.name;
+      });
+    }
   }
 
   Future<void> _callCustomer() async {
@@ -130,6 +160,60 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     }
   }
 
+  Future<void> _acceptOrder() async {
+    final confirmed = await _showConfirmDialog(
+      'قبول الطلب',
+      'هل أنت متأكد من قبول هذا الطلب بالسعر الحالي؟',
+    );
+
+    if (!confirmed) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await _orderService.acceptOrder(_order.id);
+
+      if (response.success && response.data != null) {
+        setState(() {
+          _order = response.data!;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم قبول الطلب بنجاح'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(response.error ?? 'فشل في قبول الطلب'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('حدث خطأ: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   Future<void> _rejectOrder() async {
     final confirmed = await _showConfirmDialog(
       'رفض الطلب',
@@ -188,12 +272,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text(
-              title,
-            ),
-            content: Text(
-              message,
-            ),
+            title: Text(title),
+            content: Text(message),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -259,7 +339,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   const SizedBox(height: 16),
                   _buildTimelineCard(),
                   const SizedBox(
-                      height: 100), // Space for floating action button
+                    height: 100,
+                  ), // Space for floating action button
                 ],
               ),
             ),
@@ -280,7 +361,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
           gradient: LinearGradient(
             colors: [
               statusColor.withOpacity(0.1),
-              statusColor.withOpacity(0.05)
+              statusColor.withOpacity(0.05),
             ],
             begin: Alignment.topRight,
             end: Alignment.bottomLeft,
@@ -289,11 +370,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            Icon(
-              _getStatusIcon(_order.status),
-              size: 48,
-              color: statusColor,
-            ),
+            Icon(_getStatusIcon(_order.status), size: 48, color: statusColor),
             const SizedBox(height: 12),
             Text(
               OrderStatus.getStatusDisplayName(_order.status),
@@ -304,32 +381,49 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               ),
             ),
             // Price and delivery price
-            if (_order.price != null || _order.deliveryPrice != null) ...[
+            if (_order.displayPrice != null ||
+                _order.deliveryPrice != null) ...[
               const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Flexible(
-                    child:
-                        _buildPriceDetail('السعر:', _order.price, Colors.green),
+                    child: _buildPriceDetail(
+                      _order.price != null && _order.price != 0
+                          ? 'السعر:'
+                          : 'السعر المطلوب (تقديري):',
+                      _order.displayPrice,
+                      Colors.green,
+                    ),
                   ),
                   const SizedBox(width: 16),
                   Flexible(
                     child: _buildPriceDetail(
-                        'مصاريف التوصيل:', _order.deliveryPrice, Colors.orange),
+                      'مصاريف التوصيل:',
+                      _order.deliveryPrice,
+                      Colors.orange,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               // Total price
               Text(
-                'الإجمالي: ${_order.hasNullPrices ? '--' : '${_order.totalPrice!.toStringAsFixed(2)} ج.م'}',
+                'الإجمالي: ${_order.displayPrice == null || _order.deliveryPrice == null || _order.deliveryPrice == 0 ? '--' : '${(_order.displayPrice! + _order.deliveryPrice!).toStringAsFixed(2)} ج.م'}',
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue,
                 ),
               ),
+              if (_order.price == null || _order.price == 0)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Text(
+                    'لم يتم تحديد سعر نهائي بعد من قبل المتجر',
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                ),
             ],
           ],
         ),
@@ -352,31 +446,47 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 const SizedBox(width: 12),
                 const Text(
                   'معلومات العميل',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
             const SizedBox(height: 16),
-            if (_order.user != null) ...[
-              _buildInfoRow(Icons.person, 'الاسم', _order.user!.name),
-              const SizedBox(height: 12),
-            ],
-            _buildInfoRow(Icons.phone, 'رقم الهاتف', _order.phoneNumber,
-                isPhone: true),
+            _buildInfoRow(Icons.person, 'الاسم', _displayCustomerName()),
+            const SizedBox(height: 12),
+            _buildInfoRow(
+              Icons.phone,
+              'رقم الهاتف',
+              _order.phoneNumber,
+              isPhone: true,
+            ),
             const SizedBox(height: 12),
             _buildInfoRow(Icons.location_on, 'العنوان', _order.userAddress),
-            if (_order.neighborhood != null) ...[
+            if (_neighborhoodName != null) ...[
+              const SizedBox(height: 12),
+              _buildInfoRow(Icons.location_city, 'المنطقة', _neighborhoodName!),
+            ],
+            if (_order.vendorId != -1 && _neighborhoodName != null) ...[
               const SizedBox(height: 12),
               _buildInfoRow(
-                  Icons.location_city, 'المنطقة', _order.neighborhood!.name),
+                Icons.alt_route,
+                'المسار',
+                'من ${_vendorLocationLabel()} إلى $_neighborhoodName',
+              ),
             ],
           ],
         ),
       ),
     );
+  }
+
+  String _vendorLocationLabel() {
+    final vendor = _order.vendor;
+    if (vendor == null) return 'المتجر';
+    final neighborhoodName = vendor.neighborhoodName;
+    if (neighborhoodName != null && neighborhoodName.isNotEmpty) {
+      return '$neighborhoodName - ${vendor.address}';
+    }
+    return vendor.address;
   }
 
   Widget _buildCaptainInfoCard() {
@@ -398,10 +508,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 const SizedBox(width: 12),
                 const Text(
                   'معلومات الكابتن',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -545,10 +652,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 const SizedBox(width: 12),
                 const Text(
                   'تفاصيل الطلب',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -563,12 +667,17 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               ),
               child: Text(
                 _order.description,
-                style: const TextStyle(
-                  fontSize: 16,
-                  height: 1.5,
-                ),
+                style: const TextStyle(fontSize: 16, height: 1.5),
               ),
             ),
+            if (_order.waitingTime != null) ...[
+              const SizedBox(height: 16),
+              _buildInfoRow(
+                Icons.access_time,
+                'وقت الانتظار',
+                '${_order.waitingTime} دقيقة',
+              ),
+            ],
             if (_order.additionalNotes != null &&
                 _order.additionalNotes!.isNotEmpty) ...[
               const SizedBox(height: 16),
@@ -578,10 +687,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   const SizedBox(width: 8),
                   const Text(
                     'ملاحظات إضافية',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w500,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -596,10 +702,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
                 child: Text(
                   _order.additionalNotes!,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    height: 1.5,
-                  ),
+                  style: const TextStyle(fontSize: 14, height: 1.5),
                 ),
               ),
             ],
@@ -639,10 +742,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               children: [
                 const Text(
                   'الإجمالي',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 Text(
                   '${_order.orderItems!.fold(0.0, (sum, item) => sum + (item.price * item.quantity)).toStringAsFixed(2)} ج.م',
@@ -706,10 +806,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   const SizedBox(height: 4),
                   Text(
                     item.notes!,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey[600],
-                    ),
+                    style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                   ),
                 ],
               ],
@@ -736,9 +833,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: AttachmentDisplayWidget(
-          attachments: _order.attachments!,
-        ),
+        child: AttachmentDisplayWidget(attachments: _order.attachments!),
       ),
     );
   }
@@ -758,10 +853,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 const SizedBox(width: 12),
                 const Text(
                   'التوقيت',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -769,7 +861,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             _buildTimelineItem(
               Icons.add_circle,
               'تم إنشاء الطلب',
-              TimeUtils.formatCairoTZDateTime(_order.createdAt, format: 'dd/MM/yyyy - hh:mm a'),
+              TimeUtils.formatCairoTZDateTime(
+                _order.createdAt,
+                format: 'dd/MM/yyyy - hh:mm a',
+              ),
               true,
             ),
             if (_order.updatedAt != null &&
@@ -777,7 +872,10 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
               _buildTimelineItem(
                 Icons.update,
                 'آخر تحديث',
-                TimeUtils.formatCairoTZDateTime(_order.updatedAt!, format: 'dd/MM/yyyy - hh:mm a'),
+                TimeUtils.formatCairoTZDateTime(
+                  _order.updatedAt!,
+                  format: 'dd/MM/yyyy - hh:mm a',
+                ),
                 false,
               ),
           ],
@@ -787,7 +885,11 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   }
 
   Widget _buildTimelineItem(
-      IconData icon, String title, String time, bool isFirst) {
+    IconData icon,
+    String title,
+    String time,
+    bool isFirst,
+  ) {
     return Padding(
       padding: EdgeInsets.only(bottom: isFirst ? 12 : 0),
       child: Row(
@@ -807,10 +909,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 ),
                 Text(
                   time,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey[600],
-                  ),
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
               ],
             ),
@@ -820,8 +919,27 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value,
-      {bool isPhone = false}) {
+  String _displayCustomerName() {
+    // For send-package orders, the sender's name (which may differ from the
+    // account owner) is embedded in additionalNotes as "الاسم: <name>".
+    // Prefer that when present; fall back to the account's registered name.
+    final notes = _order.additionalNotes;
+    if (notes != null) {
+      final match = RegExp(r'الاسم:\s*(.+)').firstMatch(notes);
+      final senderName = match?.group(1)?.trim();
+      if (senderName != null && senderName.isNotEmpty) {
+        return senderName;
+      }
+    }
+    return _order.user?.name ?? 'غير محدد';
+  }
+
+  Widget _buildInfoRow(
+    IconData icon,
+    String label,
+    String value, {
+    bool isPhone = false,
+  }) {
     return Row(
       children: [
         Icon(icon, color: Colors.grey[600], size: 20),
@@ -833,6 +951,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             fontWeight: FontWeight.w500,
             color: Colors.grey,
           ),
+        ),
+        // add copy icon
+        IconButton(
+          onPressed: () {
+            Clipboard.setData(ClipboardData(text: value));
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('تم نسخ النص إلى الحافظة'),
+                backgroundColor: Colors.green,
+              ),
+            );
+          },
+          icon: Icon(Icons.copy, color: Colors.grey[600], size: 20),
+          tooltip: 'نسخ',
         ),
         Expanded(
           child: GestureDetector(
@@ -865,17 +997,17 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
             child: Stack(
               children: [
                 Center(
-                  child: SmartImage(
-                    imageSource: imageUrl,
-                    fit: BoxFit.contain,
-                  ),
+                  child: SmartImage(imageSource: imageUrl, fit: BoxFit.contain),
                 ),
                 Positioned(
                   top: 50,
                   right: 20,
                   child: IconButton(
-                    icon:
-                        const Icon(Icons.close, color: Colors.white, size: 30),
+                    icon: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 30,
+                    ),
                     onPressed: () => Navigator.of(context).pop(),
                   ),
                 ),
@@ -894,26 +1026,50 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
       case OrderStatus.pending:
         buttons = [
           FloatingActionButton.extended(
+            heroTag: 'reject_order_fab',
             onPressed: _rejectOrder,
             backgroundColor: Colors.red,
             icon: const Icon(Icons.close),
-            label: const Text('رفض'),
+            label: const Text('رفض الطلب'),
           ),
-          const SizedBox(width: 16),
           FloatingActionButton.extended(
+            heroTag: 'counter_offer_fab',
             onPressed: _sendCounterOffer,
-            backgroundColor: Colors.blue,
+            backgroundColor: Colors.green,
             icon: const Icon(Icons.attach_money),
-            label: const Text('عرض'),
+            label: const Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'تاكيد السعر',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'تاكيد الطلب للعميل',
+                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.normal),
+                ),
+              ],
+            ),
           ),
+          if (_order.price != null && _order.price != 0)
+            FloatingActionButton.extended(
+              heroTag: 'accept_order_fab',
+              onPressed: _acceptOrder,
+              backgroundColor: Colors.green,
+              icon: const Icon(Icons.check),
+              label: const Text('قبول'),
+            ),
         ];
         break;
     }
 
     if (buttons.isEmpty) return null;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      alignment: WrapAlignment.center,
+      spacing: 16,
+      runSpacing: 12,
       children: buttons,
     );
   }
@@ -961,11 +1117,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     bool isValid = price != null && price != 0;
     return Text(
       '$label ${isValid ? '${price!.toStringAsFixed(2)} ج.م' : '--'}',
-      style: TextStyle(
-        fontSize: 16,
-        fontWeight: FontWeight.w500,
-        color: color,
-      ),
+      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500, color: color),
     );
   }
 }

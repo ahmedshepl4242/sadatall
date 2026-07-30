@@ -56,7 +56,7 @@ class UserService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserService.getUserProfile error: $e');
+        ('UserService.getUserProfile error: $e');
       }
       return ApiResponse<UserProfile>(
         success: false,
@@ -125,7 +125,7 @@ class UserService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserService.updateUserProfile error: $e');
+        ('UserService.updateUserProfile error: $e');
       }
       return ApiResponse<UserProfile>(
         success: false,

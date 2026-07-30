@@ -30,6 +30,14 @@ class ApiConfigManager {
   /// Initializes the API configuration by fetching the base URL from Firestore,
   /// then falls back to cached URL if Firestore fetch fails, or uses fallback value
   Future<void> initialize() async {
+    const testUrl = String.fromEnvironment('TEST_BASE_URL');
+    if (testUrl.isNotEmpty) {
+      _currentBaseUrl = testUrl;
+      _onBaseUrlChanged?.call(testUrl);
+      debugPrint('Using test base URL from environment: $testUrl');
+      return;
+    }
+
     String? newBaseUrl;
 
     try {
@@ -50,7 +58,7 @@ class ApiConfigManager {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error during base URL initialization: $e');
+        debugPrint('Error during base URL initialization: $e');
       }
       // If there's an exception, try to use cached value
       final cachedBaseUrl = await _getCachedBaseUrl();
@@ -86,9 +94,7 @@ class ApiConfigManager {
 
       final response = await http.get(
         Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
@@ -122,17 +128,20 @@ class ApiConfigManager {
         }
       } else if (response.statusCode == 404) {
         if (kDebugMode) {
-          print('Base URL document not found in Firestore: $_documentPath');
+          debugPrint(
+            'Base URL document not found in Firestore: $_documentPath',
+          );
         }
       } else {
         if (kDebugMode) {
-          print(
-              'Error fetching base URL from Firestore: ${response.statusCode} - ${response.body}');
+          (
+            'Error fetching base URL from Firestore: ${response.statusCode} - ${response.body}',
+          );
         }
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error fetching base URL from Firestore: $e');
+        ('Error fetching base URL from Firestore: $e');
       }
       // This might be a network error, return null to try cached value
       return null;
@@ -147,7 +156,7 @@ class ApiConfigManager {
       return cachedUrl;
     } catch (e) {
       if (kDebugMode) {
-        print('Error getting cached base URL: $e');
+        ('Error getting cached base URL: $e');
       }
       return null;
     }
@@ -155,11 +164,16 @@ class ApiConfigManager {
 
   /// Gets the current base URL
   String getBaseUrl() {
+    const testUrl = String.fromEnvironment('TEST_BASE_URL');
+    if (testUrl.isNotEmpty) return testUrl;
     return _currentBaseUrl ?? _fallbackBaseUrl;
   }
 
   /// Gets the base URL directly from storage (async)
   Future<String> getBaseUrlAsync() async {
+    const testUrl = String.fromEnvironment('TEST_BASE_URL');
+    if (testUrl.isNotEmpty) return testUrl;
+
     try {
       // First try to get directly from local storage
       final localBaseUrl = await _storageService.getString(_baseUrlKey);
@@ -170,7 +184,7 @@ class ApiConfigManager {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error getting base URL from storage: $e');
+        ('Error getting base URL from storage: $e');
       }
     }
 

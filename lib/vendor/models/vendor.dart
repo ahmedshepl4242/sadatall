@@ -11,6 +11,7 @@ class Vendor {
 	final double latitude;
 	final double longitude;
 	final String neighborhoodId;
+	final String? neighborhoodName;
 	final String? imageUrl;
 	final String isOpen;
 	final bool? isLocked;
@@ -27,6 +28,7 @@ class Vendor {
 		required this.latitude,
 		required this.longitude,
 		required this.neighborhoodId,
+		this.neighborhoodName,
 		this.imageUrl,
 		required this.isOpen,
 		this.isLocked,
@@ -56,6 +58,9 @@ class Vendor {
 					? (json['longitude'] as num).toDouble()
 					: double.tryParse(json['longitude']?.toString() ?? '0') ?? 0.0,
 			neighborhoodId: (json['neighborhoodId'] is num ? json['neighborhoodId'] : int.tryParse(json['neighborhoodId']?.toString() ?? '0') ?? 0).toString(),
+			neighborhoodName: json['neighborhood'] is Map
+					? (json['neighborhood'] as Map<String, dynamic>)['name']?.toString()
+					: null,
 			imageUrl: json['imageUrl']?.toString(),
 			isOpen: json['isOpen'] == null
 					? ''
@@ -82,6 +87,7 @@ class Vendor {
 			'latitude': latitude,
 			'longitude': longitude,
 			'neighborhoodId': neighborhoodId,
+			'neighborhood': neighborhoodName != null ? {'name': neighborhoodName} : null,
 			'imageUrl': imageUrl,
 			'isOpen': isOpen,
 			'isLocked': isLocked,
@@ -100,6 +106,7 @@ class Vendor {
 		double? latitude,
 		double? longitude,
 		String? neighborhoodId,
+		String? neighborhoodName,
 		String? imageUrl,
 		String? isOpen,
 		bool? isLocked,
@@ -116,6 +123,7 @@ class Vendor {
 			latitude: latitude ?? this.latitude,
 			longitude: longitude ?? this.longitude,
 			neighborhoodId: neighborhoodId ?? this.neighborhoodId,
+			neighborhoodName: neighborhoodName ?? this.neighborhoodName,
 			imageUrl: imageUrl ?? this.imageUrl,
 			isOpen: isOpen ?? this.isOpen,
 			isLocked: isLocked ?? this.isLocked,

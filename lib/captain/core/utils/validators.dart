@@ -44,6 +44,12 @@ class Validators {
       return 'اسم المستخدم يجب أن يحتوي على أحرف (عربية أو إنجليزية) وأرقام وشرطة سفلية ومسافات فقط';
     }
 
+    final parts =
+        value.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty);
+    if (parts.length < 3) {
+      return 'يرجى إدخال الاسم الثلاثي كاملاً';
+    }
+
     return null;
   }
 

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../models/vendor.dart';
@@ -50,7 +51,7 @@ class AuthService {
           await notificationService.sendFCMTokenIfNeeded();
         } catch (e) {
           if (kDebugMode) {
-            print('Error updating FCM token after login: $e');
+            ('Error updating FCM token after login: $e');
           }
         }
 
@@ -83,22 +84,25 @@ class AuthService {
     required double longitude,
     required int neighborhoodId,
     required List<int> categories,
+    required File image,
   }) async {
     try {
+      final formData = FormData.fromMap({
+        'vendorName': vendorName,
+        'contactNumber': contactNumber,
+        'password': password,
+        'address': address,
+        'description': description,
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+        'neighborhoodId': neighborhoodId.toString(),
+        'categories': categories.join(','),
+        'image': await MultipartFile.fromFile(image.path),
+      });
+
       final response = await _apiService.post<Map<String, dynamic>>(
         AppConstants.signupEndpoint,
-        data: {
-          'vendorName': vendorName,
-          'contactNumber': contactNumber,
-          'password': password,
-          'address': address,
-          'description': description,
-          'latitude': latitude.toString(),
-          'longitude': longitude.toString(),
-          'neighborhoodId': neighborhoodId.toString(),
-          'categories': categories,
-        },
-        options: Options(contentType: Headers.jsonContentType),
+        data: formData,
       );
 
       if (response.success && response.data != null) {
@@ -127,7 +131,7 @@ class AuthService {
           await notificationService.sendFCMTokenIfNeeded();
         } catch (e) {
           if (kDebugMode) {
-            print('Error updating FCM token after signup: $e');
+            ('Error updating FCM token after signup: $e');
           }
         }
 
@@ -159,7 +163,7 @@ class AuthService {
       await _storageService.clearAllTokens();
       // Log the error for debugging but don't expose it to user
       if (kDebugMode) {
-        print('خطأ غير متوقع أثناء تسجيل الخروج: ${e.toString()}');
+        ('خطأ غير متوقع أثناء تسجيل الخروج: ${e.toString()}');
       }
       return true;
     }
@@ -173,7 +177,7 @@ class AuthService {
     } catch (e) {
       await _storageService.clearAllTokens();
       if (kDebugMode) {
-        print('خطأ غير متوقع أثناء حذف الحساب: ${e.toString()}');
+        ('خطأ غير متوقع أثناء حذف الحساب: ${e.toString()}');
       }
       return true;
     }

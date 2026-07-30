@@ -6,6 +6,8 @@ import 'home/home_screen.dart';
 import 'vendors/vendors_list_screen.dart';
 import 'orders/orders_list_screen.dart';
 import 'settings/settings_screen.dart';
+import 'offers/offers_screen.dart';
+import '../main.dart' show openOffersTab;
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -17,11 +19,28 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
+  @override
+  void initState() {
+    super.initState();
+    openOffersTab.addListener(_onOpenOffers);
+  }
+
+  @override
+  void dispose() {
+    openOffersTab.removeListener(_onOpenOffers);
+    super.dispose();
+  }
+
+  void _onOpenOffers() {
+    if (mounted) setState(() => _currentIndex = 4);
+  }
+
   final List<Widget> _screens = [
     const HomeScreen(),
     const VendorsListScreen(),
     const OrdersListScreen(),
     const SettingsScreen(),
+    const OffersScreen(),
   ];
 
   final List<BottomNavigationBarItem> _navItems = [
@@ -45,19 +64,24 @@ class _MainScreenState extends State<MainScreen> {
       activeIcon: Icon(Icons.settings),
       label: 'الإعدادات',
     ),
+    const BottomNavigationBarItem(
+      icon: Icon(Icons.local_offer_outlined),
+      activeIcon: Icon(Icons.local_offer),
+      label: 'عروض',
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          final authProvider = Provider.of<AuthProvider>(context, listen: false);
+          final authProvider = Provider.of<AuthProvider>(
+            context,
+            listen: false,
+          );
           if ((index == 2 || index == 3) && !authProvider.isAuthenticated) {
             Navigator.of(context).pushNamed('/login');
             return;
@@ -73,12 +97,10 @@ class _MainScreenState extends State<MainScreen> {
           fontWeight: FontWeight.bold,
           fontSize: 12,
         ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-        ),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: _navItems,
         elevation: 8,
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
       ),
     );
   }

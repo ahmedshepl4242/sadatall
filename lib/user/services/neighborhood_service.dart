@@ -56,7 +56,7 @@ class NeighborhoodService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('NeighborhoodService.getNeighborhoods error: $e');
+        ('NeighborhoodService.getNeighborhoods error: $e');
       }
       return ApiResponse<List<Neighborhood>>(
         success: false,

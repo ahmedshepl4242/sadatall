@@ -43,10 +43,12 @@ class SmartCircleAvatar extends StatelessWidget {
       radius: radius,
       backgroundColor: backgroundColor,
       backgroundImage: backgroundImage,
-      onBackgroundImageError: backgroundImage != null ? (error, stackTrace) {
-        // Handle image loading errors
-        debugPrint('CircleAvatar image error: $error');
-      } : null,
+      onBackgroundImageError: backgroundImage != null
+          ? (error, stackTrace) {
+              // Handle image loading errors
+              debugPrint('CircleAvatar image error: $error');
+            }
+          : null,
       child: backgroundImage == null ? child : null,
     );
   }

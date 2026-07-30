@@ -86,7 +86,7 @@ class CaptainService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('CaptainService.getCaptainLocation error: $e');
+        ('CaptainService.getCaptainLocation error: $e');
       }
       return ApiResponse<CaptainLocation>(
         success: false,
@@ -137,7 +137,7 @@ class CaptainService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('CaptainService.getCaptainProfile error: $e');
+        ('CaptainService.getCaptainProfile error: $e');
       }
       return ApiResponse<Captain>(
         success: false,
@@ -188,7 +188,7 @@ class CaptainService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('CaptainService.getCaptainStats error: $e');
+        ('CaptainService.getCaptainStats error: $e');
       }
       return ApiResponse<CaptainStats>(
         success: false,

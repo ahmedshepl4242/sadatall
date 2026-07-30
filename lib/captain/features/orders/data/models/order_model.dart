@@ -20,6 +20,7 @@ class OrderModel {
   final String phoneNumber;
   final double? price;
   final double? deliveryPrice;
+  final int? waitingTime;
   @JsonKey(fromJson: _dateTimeFromJsonRequired, toJson: _dateTimeToJsonRequired)
   final DateTime createdAt;
   @JsonKey(fromJson: _dateTimeFromJson, toJson: _dateTimeToJson)
@@ -52,6 +53,7 @@ class OrderModel {
     required this.phoneNumber,
     this.price,
     this.deliveryPrice,
+    this.waitingTime,
     required this.createdAt,
     this.counterOfferSentAt,
     this.acceptedByVend,
@@ -70,6 +72,17 @@ class OrderModel {
     if (vendor != null) return vendor!.vendorName;
     if (vendorId == '-1') return 'طلب خاص';
     return 'غير محدد';
+  }
+
+  // Text summary of the delivery route: from the vendor's neighborhood/address
+  // to the order's destination neighborhood. Only meaningful when the order
+  // has a real vendor (not a special order, vendorId == '-1').
+  String? get routeLabel {
+    if (vendorId == '-1' || vendor == null) return null;
+    final vendorLocation = vendor!.neighborhood?.name ?? vendor!.address;
+    final destination = neighborhood?.name;
+    if (destination == null) return null;
+    return 'من $vendorLocation إلى $destination';
   }
 
   factory OrderModel.fromJson(Map<String, dynamic> json) =>
@@ -131,6 +144,7 @@ class VendorInfo {
   final String address;
   final double? longitude;
   final double? latitude;
+  final NeighborhoodInfo? neighborhood;
 
   VendorInfo({
     required this.id,
@@ -139,6 +153,7 @@ class VendorInfo {
     required this.address,
     this.longitude,
     this.latitude,
+    this.neighborhood,
   });
 
   factory VendorInfo.fromJson(Map<String, dynamic> json) =>

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, debug, debugPrint;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -59,7 +59,7 @@ class ApiConfig {
       final packageInfo = await PackageInfo.fromPlatform();
       final currentVersion = packageInfo.version;
       if (kDebugMode) {
-        print(
+        (
             'Force update check — current: $currentVersion, required: $requiredVersion');
       }
       if (_isUpdateRequired(currentVersion, requiredVersion)) {
@@ -67,7 +67,7 @@ class ApiConfig {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Force update check failed (non-blocking): $e');
+        ('Force update check failed (non-blocking): $e');
       }
     }
     return null;
@@ -75,12 +75,16 @@ class ApiConfig {
 
   // Fetch base URL from Firestore
   static Future<String?> fetchBaseUrl() async {
-    // return "http://DELL-AYMAN:3004/api"; for testing only
+    const testUrl = String.fromEnvironment('TEST_BASE_URL');
+    if (testUrl.isNotEmpty){
+      debugPrint('Using test base URL from environment: $testUrl');
+    return testUrl;
+    } 
     try {
       // Initialize Firebase with the specific config (without interfering with main Firebase app)
       await _initializeFirebaseApp();
 
-      print('Fetching IP/URL from Firebase Firestore...');
+      ('Fetching IP/URL from Firebase Firestore...');
 
       // Fetch from Firestore
       final docSnapshot = await getFirestoreInstance()
@@ -95,7 +99,7 @@ class ApiConfig {
           final baseUrl = docData[_fieldName] as String?;
 
           if (baseUrl != null && baseUrl.isNotEmpty) {
-            print('Successfully fetched IP/URL from Firebase: $baseUrl');
+            ('Successfully fetched IP/URL from Firebase: $baseUrl');
             // Cache and save to local storage
             _cachedBaseUrl = baseUrl;
             await _saveBaseUrlToLocal(baseUrl);
@@ -105,11 +109,11 @@ class ApiConfig {
       }
 
       // If Firestore fetch fails, return cached value or default
-      print(
+      (
           'Firebase fetch failed or returned empty result. Using cached/default URL.');
       return await _getCachedBaseUrl();
     } catch (e) {
-      print('Error fetching IP/URL from Firebase: $e');
+      ('Error fetching IP/URL from Firebase: $e');
       return await _getCachedBaseUrl();
     }
   }

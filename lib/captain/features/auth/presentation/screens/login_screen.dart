@@ -10,6 +10,7 @@ import '../../../../main_navigation.dart';
 import '../providers/auth_provider.dart';
 import 'signup_screen.dart';
 import 'captain_locked_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -124,7 +125,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 32),
+                const SizedBox(height: 16),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen(),
+                      ),
+                    ),
+                    child: const Text(
+                      'نسيت كلمة المرور؟',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 CustomButton(
                   text: 'تسجيل الدخول',
                   onPressed: _login,

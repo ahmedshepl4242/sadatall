@@ -23,9 +23,7 @@ class OrderCard extends StatelessWidget {
       child: Card(
         elevation: 2,
         shadowColor: Colors.black12,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
@@ -110,10 +108,7 @@ class OrderCard extends StatelessWidget {
                   ),
                   child: Text(
                     order.description,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Colors.black87,
-                    ),
+                    style: const TextStyle(fontSize: 14, color: Colors.black87),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -156,14 +151,24 @@ class OrderCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Price, delivery price, and total
-                    if (order.price != null || order.deliveryPrice != null) ...[
-                      _buildPriceText('السعر: ', order.price, Colors.green),
+                    if (order.displayPrice != null ||
+                        order.deliveryPrice != null) ...[
+                      _buildPriceText(
+                        order.price != null && order.price != 0
+                            ? 'السعر: '
+                            : 'السعر المطلوب (تقديري): ',
+                        order.displayPrice,
+                        Colors.green,
+                      ),
                       const SizedBox(height: 2),
-                      _buildPriceText('مصاريف التوصيل: ', order.deliveryPrice,
-                          Colors.orange),
+                      _buildPriceText(
+                        'مصاريف التوصيل: ',
+                        order.deliveryPrice,
+                        Colors.orange,
+                      ),
                       const SizedBox(height: 2),
                       Text(
-                        'الإجمالي: ${order.hasNullPrices ? '--' : '${order.totalPrice!.toStringAsFixed(2)} ج.م'}',
+                        'الإجمالي: ${order.displayPrice == null || order.deliveryPrice == null || order.deliveryPrice == 0 ? '--' : '${(order.displayPrice! + order.deliveryPrice!).toStringAsFixed(2)} ج.م'}',
                         style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -172,12 +177,79 @@ class OrderCard extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                     ],
+                    if (order.waitingTime != null) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.access_time,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'وقت الانتظار: ${order.waitingTime} دقيقة',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey[700],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                    ],
+                    if (order.routeLabel != null) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.alt_route,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              order.routeLabel!,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[700],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                    ] else if (order.neighborhood != null) ...[
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_city,
+                            size: 14,
+                            color: Colors.grey[600],
+                          ),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'المنطقة: ${order.neighborhood!.name}',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey[700],
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                    ],
                     Text(
                       _formatTZDateTime(order.createdAt),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -203,10 +275,7 @@ class OrderCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'و ${order.orderItems!.length - 2} عناصر أخرى...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ],
@@ -295,10 +364,7 @@ class OrderCard extends StatelessWidget {
           ),
           Text(
             '${item.price.toStringAsFixed(2)} ج.م',
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
           ),
         ],
       ),
@@ -309,11 +375,7 @@ class OrderCard extends StatelessWidget {
     bool isValid = price != null && price != 0;
     return Text(
       '$label${isValid ? '${price!.toStringAsFixed(2)} ج.م' : '--'}',
-      style: TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: color,
-      ),
+      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: color),
     );
   }
 

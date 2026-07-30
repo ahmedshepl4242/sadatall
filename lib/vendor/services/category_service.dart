@@ -43,7 +43,7 @@ class CategoryService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error fetching categories: $e');
+        ('Error fetching categories: $e');
       }
       return ApiResponse<List<Category>>(
         success: false,

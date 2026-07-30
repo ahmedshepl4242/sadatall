@@ -7,6 +7,7 @@ import '../../widgets/common/loading_overlay.dart';
 import '../../utils/validators.dart';
 import '../../services/auth_service.dart';
 import '../../theme/app_theme.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -187,7 +188,25 @@ class _LoginScreenState extends State<LoginScreen> {
                             textInputAction: TextInputAction.done,
                             onSubmitted: (_) => _login(),
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 8),
+
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: TextButton(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ForgotPasswordScreen(),
+                                ),
+                              ),
+                              child: const Text(
+                                'نسيت كلمة المرور؟',
+                                style: TextStyle(fontSize: 13),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 8),
 
                           // Login Button
                           CustomButton(

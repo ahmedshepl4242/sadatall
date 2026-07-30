@@ -20,7 +20,6 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
   @override
   void initState() {
     super.initState();
-    // Load current orders when screen initializes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(currentOrdersProvider.notifier).loadCurrentOrders();
     });
@@ -90,7 +89,13 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
                 const Divider(height: 32, thickness: 2),
                 const SizedBox(height: 8),
               ],
-              _buildOrderCard(context, order, isProcessing, index + 1, currentOrdersState.orders.length),
+              _buildOrderCard(
+                context,
+                order,
+                isProcessing,
+                index + 1,
+                currentOrdersState.orders.length,
+              ),
             ],
           );
         },
@@ -132,7 +137,13 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
     );
   }
 
-  Widget _buildOrderCard(BuildContext context, OrderModel order, bool isProcessing, int orderNumber, int totalOrders) {
+  Widget _buildOrderCard(
+    BuildContext context,
+    OrderModel order,
+    bool isProcessing,
+    int orderNumber,
+    int totalOrders,
+  ) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -148,7 +159,10 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
                     children: [
                       if (totalOrders > 1) ...[
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
                           decoration: BoxDecoration(
                             color: AppColors.primary,
                             borderRadius: BorderRadius.circular(12),
@@ -197,24 +211,31 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
             const SizedBox(height: 16),
             _buildOrderInfo('المطعم/المتجر:', order.vendorName),
             if (order.vendor != null)
-              _buildPhoneInfo('رقم المطعم/المتجر:', order.vendor!.contactNumber),
+              _buildPhoneInfo(
+                'رقم المطعم/المتجر:',
+                order.vendor!.contactNumber,
+              ),
             // Only show description for special orders (vendorId == '-1')
             if (order.vendorId == '-1')
-              _buildOrderInfoWithClickablePhones('وصف الطلب:', order.description),
+              _buildOrderInfoWithClickablePhones(
+                'وصف الطلب:',
+                order.description,
+              ),
             if (order.neighborhood != null)
               _buildOrderInfo('الحي:', order.neighborhood!.name),
+            if (order.routeLabel != null)
+              _buildOrderInfo('المسار:', order.routeLabel!),
             _buildOrderInfo('عنوان التسليم:', order.userAddress),
             _buildPhoneInfo('رقم الهاتف:', order.phoneNumber),
             if (order.price != null)
-              _buildOrderInfo(
-                'سعر الطلب:',
-                AppUtils.formatPrice(order.price!),
-              ),
+              _buildOrderInfo('سعر الطلب:', AppUtils.formatPrice(order.price!)),
             if (order.deliveryPrice != null)
               _buildOrderInfo(
                 'سعر التوصيل:',
                 AppUtils.formatPrice(order.deliveryPrice!),
               ),
+            if (order.waitingTime != null)
+              _buildOrderInfo('الوقت التقديري:', '${order.waitingTime} دقيقة'),
             _buildOrderInfo(
               'وقت الطلب:',
               AppUtils.formatDateTime(order.createdAt.toLocal()),
@@ -223,11 +244,11 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
             if (order.vendorId == '-1' &&
                 order.additionalNotes != null &&
                 order.additionalNotes!.isNotEmpty)
-              _buildOrderInfoWithClickablePhones('ملاحظات:', order.additionalNotes!),
-            // Display attachments for special orders (vendorId == '-1')
-            if (order.vendorId == '-1' &&
-                order.attachments != null &&
-                order.attachments!.isNotEmpty)
+              _buildOrderInfoWithClickablePhones(
+                'ملاحظات:',
+                order.additionalNotes!,
+              ),
+            if (order.attachments != null && order.attachments!.isNotEmpty)
               OrderAttachmentsWidget(attachments: order.attachments!),
             const SizedBox(height: 16),
             // Action buttons
@@ -236,9 +257,11 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
                 Expanded(
                   child: CustomButton(
                     text: 'اتصال',
-                    onPressed: isProcessing ? null : () {
-                      _makePhoneCall(order.phoneNumber);
-                    },
+                    onPressed: isProcessing
+                        ? null
+                        : () {
+                            _makePhoneCall(order.phoneNumber);
+                          },
                     type: ButtonType.outlined,
                     icon: Icons.phone,
                     height: 40,
@@ -248,9 +271,11 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
                 Expanded(
                   child: CustomButton(
                     text: 'تم التسليم',
-                    onPressed: isProcessing ? null : () {
-                      _markAsDelivered(order.id);
-                    },
+                    onPressed: isProcessing
+                        ? null
+                        : () {
+                            _markAsDelivered(order.id);
+                          },
                     isLoading: isProcessing,
                     backgroundColor: AppColors.success,
                     icon: Icons.check_circle,
@@ -262,9 +287,11 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
             const SizedBox(height: 8),
             CustomButton(
               text: 'إشعار العميل بالوصول',
-              onPressed: isProcessing ? null : () {
-                _notifyUserArrived(order.id);
-              },
+              onPressed: isProcessing
+                  ? null
+                  : () {
+                      _notifyUserArrived(order.id);
+                    },
               type: ButtonType.outlined,
               icon: Icons.notifications_active,
               height: 40,
@@ -281,12 +308,16 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
                 height: 40,
               ),
             ],
-            if (order.vendor?.latitude != null && order.vendor?.longitude != null) ...[
+            if (order.vendor?.latitude != null &&
+                order.vendor?.longitude != null) ...[
               const SizedBox(height: 8),
               CustomButton(
                 text: 'موقع المطعم',
                 onPressed: () {
-                  _openInMaps(order.vendor!.latitude!, order.vendor!.longitude!);
+                  _openInMaps(
+                    order.vendor!.latitude!,
+                    order.vendor!.longitude!,
+                  );
                 },
                 type: ButtonType.outlined,
                 icon: Icons.store,
@@ -342,11 +373,7 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
               ),
             ),
           ),
-          Expanded(
-            child: ClickablePhoneField(
-              phoneNumber: phoneNumber,
-            ),
-          ),
+          Expanded(child: ClickablePhoneField(phoneNumber: phoneNumber)),
         ],
       ),
     );
@@ -477,9 +504,9 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
         Navigator.of(context).pop();
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حدث خطأ غير متوقع')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('حدث خطأ غير متوقع')));
       }
     }
   }
@@ -535,9 +562,9 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
 
       if (success) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('تم تسليم الطلب بنجاح')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('تم تسليم الطلب بنجاح')));
         }
       } else {
         final error = ref.read(currentOrdersProvider).error;
@@ -552,9 +579,9 @@ class _CurrentOrderScreenState extends ConsumerState<CurrentOrderScreen> {
         Navigator.of(context, rootNavigator: true).pop();
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('حدث خطأ غير متوقع')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('حدث خطأ غير متوقع')));
       }
     }
   }

@@ -86,20 +86,32 @@ class ApiClient {
       final body = jsonDecode(response.body);
       if (response.statusCode == 200 && body['success'] == true) {
         final data = body['data'];
-        _authToken = data['token'];
-        _refreshToken = data['refreshToken'];
+        final newToken = data['token'] as String;
+        final newRefreshToken = data['refreshToken'] as String;
 
-        // Save tokens to secure storage
-        await _storageService.setSecureString(StorageService.keyAuthToken, _authToken!);
-        await _storageService.setSecureString(StorageService.keyRefreshToken, _refreshToken!);
+        // Persist both tokens to secure storage before updating in-memory
+        // state, and do it in parallel to minimize the window in which the
+        // app could be killed after the server has already rotated the
+        // refresh token but before this device has saved the new one
+        // (which would otherwise desync the client from the server and
+        // force a full re-login even though the session was never
+        // explicitly ended).
+        await Future.wait([
+          _storageService.setSecureString(StorageService.keyAuthToken, newToken),
+          _storageService.setSecureString(StorageService.keyRefreshToken, newRefreshToken),
+        ]);
+
+        _authToken = newToken;
+        _refreshToken = newRefreshToken;
       } else {
         // Only logout if it's an authentication error (401, 403)
         if (response.statusCode == 401 || response.statusCode == 403) {
           await _logoutUser();
         }
         throw ApiException(
-          message: body['error'] ?? 'Failed to refresh token',
+          message: body['error'] ?? body['message'] ?? 'Failed to refresh token',
           statusCode: response.statusCode,
+          errorCode: body['errorCode']?.toString(),
         );
       }
     } catch (e) {
@@ -262,8 +274,9 @@ class ApiClient {
       return ApiResponse.fromJson(body, fromJson);
     } else {
       throw ApiException(
-        message: body['error'] ?? 'Unknown error occurred',
+        message: body['error'] ?? body['message'] ?? 'Unknown error occurred',
         statusCode: statusCode,
+        errorCode: body['errorCode']?.toString(),
       );
     }
   }

@@ -83,18 +83,21 @@ class CustomButton extends StatelessWidget {
       );
     }
 
+    final effectiveColor = textColor ??
+        (type == ButtonType.primary ? AppColors.onPrimary : AppColors.primary);
+
     if (icon != null) {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 20),
           const SizedBox(width: 8),
-          Text(text, style: AppTextStyles.button),
+          Text(text, style: AppTextStyles.button.copyWith(color: effectiveColor)),
         ],
       );
     }
 
-    return Text(text, style: AppTextStyles.button);
+    return Text(text, style: AppTextStyles.button.copyWith(color: effectiveColor));
   }
 }
 

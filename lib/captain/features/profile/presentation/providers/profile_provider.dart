@@ -68,7 +68,7 @@ class ProfileNotifier extends StateNotifier<ProfileState> {
         stats = results[1] as CaptainStats;
       } catch (e) {
         // Stats loading failed, but profile loaded successfully
-        print("Failed to load stats: $e");
+        ("Failed to load stats: $e");
       }
       state = state.copyWith(captain: captain, stats: stats, isLoading: false);
     } catch (e) {

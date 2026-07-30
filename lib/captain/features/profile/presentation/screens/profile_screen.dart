@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sadat_delivery_merged/app_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../core/theme/app_colors.dart';
+import '../../../../core/providers/theme_provider.dart';
 import '../../../../core/widgets/custom_button.dart';
 import '../../../../core/utils/app_utils.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
@@ -300,11 +301,33 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              secondary: Icon(
+                ref.watch(themeModeProvider) == ThemeMode.dark
+                    ? Icons.dark_mode
+                    : Icons.light_mode,
+                color: AppColors.onSurfaceVariant,
+              ),
+              title: const Text(
+                'الوضع الليلي',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+              subtitle: const Text(
+                'تفعيل المظهر الداكن للتطبيق',
+                style: TextStyle(fontSize: 14),
+              ),
+              value: ref.watch(themeModeProvider) == ThemeMode.dark,
+              onChanged: (value) =>
+                  ref.read(themeModeProvider.notifier).setDarkMode(value),
+            ),
+            const SizedBox(height: 12),
             CustomButton(
               text: 'تسجيل الخروج',
               onPressed: () => _showLogoutDialog(context),
               type: ButtonType.outlined,
               icon: Icons.logout,
+              textColor: AppColors.error,
             ),
             const SizedBox(height: 12),
             CustomButton(
@@ -312,6 +335,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               onPressed: () => _showDeleteAccountDialog(context),
               type: ButtonType.outlined,
               icon: Icons.delete_forever,
+              textColor: AppColors.error,
             ),
           ],
         ),

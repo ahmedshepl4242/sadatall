@@ -14,6 +14,9 @@ import 'screens/splash_screen.dart';
 // Global navigator key for navigation from services
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
+// Triggers navigation to the offers tab when an announcement notification is tapped
+final ValueNotifier<int> openOffersTab = ValueNotifier<int>(0);
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

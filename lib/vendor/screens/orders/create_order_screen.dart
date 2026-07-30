@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../services/order_service.dart';
+import '../../theme/app_theme.dart';
 import '../../widgets/common/neighborhood_dropdown.dart';
 
 class CreateOrderScreen extends StatefulWidget {
@@ -21,6 +22,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   final OrderService _orderService = OrderService();
   bool _isLoading = false;
   String? _selectedNeighborhoodId;
+  int? _selectedWaitingTime;
+
+  static const List<int> _waitingTimeOptions = [5, 10, 15, 20, 25, 30, 60];
 
   Future<void> _createOrder() async {
     if (!_formKey.currentState!.validate()) return;
@@ -34,7 +38,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       final description = _descriptionController.text.trim();
       final notes = _notesController.text.trim();
       final address = _addressController.text.trim();
-      final phone = _phoneController.text.trim();
+      final phone = _phoneController.text.trim().isNotEmpty
+          ? _phoneController.text.trim()
+          : 'غير محدد';
       final priceText = _priceController.text.trim();
       final price = priceText.isNotEmpty ? double.tryParse(priceText) : null;
 
@@ -45,6 +51,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
         phoneNumber: phone,
         neighborhoodId: neighborhoodId,
         price: price,
+        waitingTime: _selectedWaitingTime,
       );
 
       if (response.success && response.data != null) {
@@ -87,15 +94,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text(
           'إنشاء طلب جديد',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
+        backgroundColor: AppTheme.primaryColor,
+        foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(
@@ -105,13 +110,13 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildInfoCard(),
+              _buildInfoCard(context),
               const SizedBox(height: 16),
-              _buildCustomerInfoCard(),
+              _buildCustomerInfoCard(context),
               const SizedBox(height: 16),
-              _buildOrderDetailsCard(),
+              _buildOrderDetailsCard(context),
               const SizedBox(height: 24),
-              _buildActionButtons(),
+              _buildActionButtons(context),
             ],
           ),
         ),
@@ -119,18 +124,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          gradient: LinearGradient(
-            colors: [Colors.blue[50]!, Colors.blue[50]!],
-            begin: Alignment.topRight,
-            end: Alignment.bottomLeft,
-          ),
+          color: isDark ? Colors.blue.withOpacity(0.15) : Colors.blue[50],
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -138,7 +140,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             Icon(
               Icons.add_business,
               size: 48,
-              color: Colors.blue[700],
+              color: isDark ? Colors.blue[200] : Colors.blue[700],
             ),
             const SizedBox(height: 12),
             Text(
@@ -146,7 +148,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: Colors.blue[700],
+                color: isDark ? Colors.blue[200] : Colors.blue[700],
               ),
             ),
             const SizedBox(height: 8),
@@ -154,7 +156,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               'قم بإنشاء طلب نيابة عن العميل وإرساله إليه',
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.blue[600],
+                color: isDark ? Colors.blue[100] : Colors.blue[600],
               ),
               textAlign: TextAlign.center,
             ),
@@ -164,7 +166,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildCustomerInfoCard() {
+  Widget _buildCustomerInfoCard(BuildContext context) {
+    final labelColor = Theme.of(context).textTheme.bodySmall?.color;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -179,10 +182,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 const SizedBox(width: 12),
                 const Text(
                   'معلومات العميل',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -194,8 +194,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               keyboardType: TextInputType.phone,
               textDirection: TextDirection.ltr,
               decoration: InputDecoration(
-                labelText: 'رقم الهاتف',
-                labelStyle: const TextStyle(color: Colors.grey),
+                labelText: 'رقم الهاتف (اختياري)',
+                labelStyle: TextStyle(color: labelColor),
                 hintText: '+201234567890',
                 hintTextDirection: TextDirection.ltr,
                 prefixIcon: Icon(Icons.phone, color: Colors.green[700]),
@@ -207,12 +207,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                   borderSide: BorderSide(color: Colors.green[700]!, width: 2),
                 ),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'يرجى إدخال رقم الهاتف';
-                }
-                return null;
-              },
             ),
 
             const SizedBox(height: 16),
@@ -223,8 +217,8 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               maxLines: 2,
               textDirection: TextDirection.rtl,
               decoration: InputDecoration(
-                labelText: 'عنوان التوصيل',
-                labelStyle: const TextStyle(color: Colors.grey),
+                labelText: 'عنوان التوصيل (اختياري)',
+                labelStyle: TextStyle(color: labelColor),
                 hintText: 'اكتب العنوان الكامل للتوصيل...',
                 hintTextDirection: TextDirection.rtl,
                 prefixIcon: Icon(Icons.location_on, color: Colors.red[700]),
@@ -237,12 +231,6 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 ),
                 alignLabelWithHint: true,
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'يرجى إدخال عنوان التوصيل';
-                }
-                return null;
-              },
             ),
 
             const SizedBox(height: 16),
@@ -270,7 +258,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildOrderDetailsCard() {
+  Widget _buildOrderDetailsCard(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final labelColor = Theme.of(context).textTheme.bodySmall?.color;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -285,10 +275,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 const SizedBox(width: 12),
                 const Text(
                   'تفاصيل الطلب',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -303,7 +290,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               ],
               decoration: InputDecoration(
                 labelText: 'السعر (ج.م) - اختياري',
-                labelStyle: const TextStyle(color: Colors.grey),
+                labelStyle: TextStyle(color: labelColor),
                 hintText: 'أدخل السعر الإجمالي للطلب...',
                 hintTextDirection: TextDirection.rtl,
                 prefixIcon: Icon(Icons.attach_money, color: Colors.green[700]),
@@ -325,6 +312,35 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                 }
                 return null;
               },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Waiting time field
+            DropdownButtonFormField<int>(
+              initialValue: _selectedWaitingTime,
+              decoration: InputDecoration(
+                labelText: 'الوقت التقديري للتوصيل (اختياري)',
+                labelStyle: TextStyle(color: labelColor),
+                hintText: 'اختر الوقت التقديري',
+                prefixIcon: Icon(Icons.timer_outlined, color: Colors.blue[700]),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.blue[700]!, width: 2),
+                ),
+              ),
+              items: _waitingTimeOptions
+                  .map(
+                    (minutes) => DropdownMenuItem(
+                      value: minutes,
+                      child: Text('$minutes دقيقة'),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (v) => setState(() => _selectedWaitingTime = v),
             ),
 
             const SizedBox(height: 16),
@@ -364,7 +380,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
               maxLines: 3,
               decoration: InputDecoration(
                 labelText: 'ملاحظات إضافية (اختياري)',
-                labelStyle: const TextStyle(color: Colors.grey),
+                labelStyle: TextStyle(color: labelColor),
                 hintText: 'أي ملاحظات أو تفاصيل إضافية...',
                 hintTextDirection: TextDirection.rtl,
                 prefixIcon: Icon(Icons.note, color: Colors.teal[700]),
@@ -385,20 +401,28 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                color: isDark ? Colors.blue.withOpacity(0.15) : Colors.blue[50],
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.blue[200]!),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.blue.withOpacity(0.4)
+                      : Colors.blue[200]!,
+                ),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info, color: Colors.blue[700], size: 20),
+                  Icon(
+                    Icons.info,
+                    color: isDark ? Colors.blue[200] : Colors.blue[700],
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'سيتم إرسال الطلب للعميل المحدد بحالة "في الانتظار".',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.blue[700],
+                        color: isDark ? Colors.blue[200] : Colors.blue[700],
                       ),
                     ),
                   ),
@@ -409,20 +433,30 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.orange[50],
+                color: isDark
+                    ? Colors.orange.withOpacity(0.15)
+                    : Colors.orange[50],
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.orange[200]!),
+                border: Border.all(
+                  color: isDark
+                      ? Colors.orange.withOpacity(0.4)
+                      : Colors.orange[200]!,
+                ),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.warning, color: Colors.orange[700], size: 20),
+                  Icon(
+                    Icons.warning,
+                    color: isDark ? Colors.orange[200] : Colors.orange[700],
+                    size: 20,
+                  ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'تأكد من صحة المعلومات قبل الإرسال.',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.orange[700],
+                        color: isDark ? Colors.orange[200] : Colors.orange[700],
                       ),
                     ),
                   ),
@@ -435,7 +469,9 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
     );
   }
 
-  Widget _buildActionButtons() {
+  Widget _buildActionButtons(BuildContext context) {
+    final outlineColor = Theme.of(context).dividerColor;
+    final outlineTextColor = Theme.of(context).textTheme.bodyMedium?.color;
     return Column(
       children: [
         SizedBox(
@@ -483,18 +519,15 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
           child: OutlinedButton(
             onPressed: _isLoading ? null : () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.grey[700],
-              side: BorderSide(color: Colors.grey[300]!),
+              foregroundColor: outlineTextColor,
+              side: BorderSide(color: outlineColor),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
             ),
             child: const Text(
               'إلغاء',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
         ),

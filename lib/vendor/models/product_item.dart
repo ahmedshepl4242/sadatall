@@ -1,3 +1,64 @@
+class ItemSizeOption {
+  final String? id;
+  final String name;
+  final double price;
+  final double? discountPrice;
+  final bool isAvailable;
+
+  ItemSizeOption({
+    this.id,
+    required this.name,
+    required this.price,
+    this.discountPrice,
+    this.isAvailable = true,
+  });
+
+  factory ItemSizeOption.fromJson(Map<String, dynamic> json) {
+    return ItemSizeOption(
+      id: json['id']?.toString(),
+      name: json['name']?.toString() ?? '',
+      price: json['price'] is num
+          ? (json['price'] as num).toDouble()
+          : double.tryParse(json['price']?.toString() ?? '0') ?? 0.0,
+      discountPrice: json['discountPrice'] == null
+          ? null
+          : (json['discountPrice'] is num
+              ? (json['discountPrice'] as num).toDouble()
+              : double.tryParse(json['discountPrice'].toString())),
+      isAvailable: json['isAvailable'] == true ||
+          json['isAvailable']?.toString().toLowerCase() == 'true',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (id != null) 'id': id,
+      'name': name,
+      'price': price,
+      if (discountPrice != null) 'discountPrice': discountPrice,
+      'isAvailable': isAvailable,
+    };
+  }
+
+  ItemSizeOption copyWith({
+    String? id,
+    String? name,
+    double? price,
+    double? discountPrice,
+    bool? isAvailable,
+    bool clearDiscountPrice = false,
+  }) {
+    return ItemSizeOption(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      price: price ?? this.price,
+      discountPrice:
+          clearDiscountPrice ? null : (discountPrice ?? this.discountPrice),
+      isAvailable: isAvailable ?? this.isAvailable,
+    );
+  }
+}
+
 class ProductItem {
   final String id;
   final String name;
@@ -7,6 +68,7 @@ class ProductItem {
   final bool isAvailable;
   final String vendorId;
   final String? imageUrl;
+  final List<ItemSizeOption> sizes;
 
   ProductItem({
     required this.id,
@@ -17,6 +79,7 @@ class ProductItem {
     required this.isAvailable,
     required this.vendorId,
     this.imageUrl,
+    this.sizes = const [],
   });
 
   factory ProductItem.fromJson(Map<String, dynamic> json) {
@@ -32,6 +95,11 @@ class ProductItem {
           json['isAvailable']?.toString().toLowerCase() == 'true',
       vendorId: json['vendorId']?.toString() ?? '',
       imageUrl: json['imageUrl']?.toString(),
+      sizes: json['sizes'] is List
+          ? (json['sizes'] as List)
+              .map((s) => ItemSizeOption.fromJson(s as Map<String, dynamic>))
+              .toList()
+          : const [],
     );
   }
 
@@ -45,6 +113,7 @@ class ProductItem {
       'isAvailable': isAvailable,
       'vendorId': vendorId,
       if (imageUrl != null) 'imageUrl': imageUrl,
+      'sizes': sizes.map((s) => s.toJson()).toList(),
     };
   }
 
@@ -57,6 +126,7 @@ class ProductItem {
     bool? isAvailable,
     String? vendorId,
     String? imageUrl,
+    List<ItemSizeOption>? sizes,
   }) {
     return ProductItem(
       id: id ?? this.id,
@@ -67,6 +137,7 @@ class ProductItem {
       isAvailable: isAvailable ?? this.isAvailable,
       vendorId: vendorId ?? this.vendorId,
       imageUrl: imageUrl ?? this.imageUrl,
+      sizes: sizes ?? this.sizes,
     );
   }
 

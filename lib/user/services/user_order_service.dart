@@ -14,6 +14,48 @@ class UserOrderService {
   final ApiService _apiService = ApiService();
   final AuthService _authService = AuthService();
 
+  Future<ApiResponse<Order>> getOrderById(String orderId) async {
+    try {
+      final token = await _authService.getAccessToken();
+      if (token == null) {
+        return ApiResponse<Order>(success: false, error: 'غير مصرح للوصول');
+      }
+
+      final response = await _apiService.get<Map<String, dynamic>>(
+        '/orders/$orderId',
+        options: Options(headers: {'Authorization': 'Bearer $token'}),
+      );
+
+      if (response.success && response.data != null) {
+        final orderJson =
+            response.data is Map<String, dynamic> &&
+                response.data!.containsKey('data')
+            ? response.data!['data'] as Map<String, dynamic>?
+            : response.data!;
+
+        if (orderJson != null) {
+          return ApiResponse<Order>(
+            success: true,
+            data: Order.fromJson(orderJson),
+            message: response.message ?? 'تم استرداد الطلب بنجاح',
+          );
+        }
+      }
+      return ApiResponse<Order>(
+        success: false,
+        error: response.error ?? 'فشل في استرداد الطلب',
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        ('UserOrderService.getOrderById error: $e');
+      }
+      return ApiResponse<Order>(
+        success: false,
+        error: 'حدث خطأ أثناء استرداد الطلب: ${e.toString()}',
+      );
+    }
+  }
+
   Future<ApiResponse<List<Order>>> getUserOrders({
     int page = 1,
     int limit = 10,
@@ -28,10 +70,7 @@ class UserOrderService {
         );
       }
 
-      final queryParameters = <String, dynamic>{
-        'page': page,
-        'limit': limit,
-      };
+      final queryParameters = <String, dynamic>{'page': page, 'limit': limit};
 
       if (status != null) {
         queryParameters['status'] = status;
@@ -44,7 +83,8 @@ class UserOrderService {
       );
 
       if (response.success && response.data != null) {
-        final dataContainer = response.data is Map<String, dynamic> &&
+        final dataContainer =
+            response.data is Map<String, dynamic> &&
                 response.data!.containsKey('data')
             ? response.data!['data'] as Map<String, dynamic>?
             : response.data!;
@@ -74,7 +114,7 @@ class UserOrderService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserOrderService.getUserOrders error: $e');
+        ('UserOrderService.getUserOrders error: $e');
       }
       return ApiResponse<List<Order>>(
         success: false,
@@ -86,6 +126,7 @@ class UserOrderService {
   Future<ApiResponse<Order>> createOrder({
     required String vendorId,
     required String description,
+    required double price,
     required String additionalNotes,
     required String userAddress,
     required String phoneNumber,
@@ -97,16 +138,14 @@ class UserOrderService {
     try {
       final token = await _authService.getAccessToken();
       if (token == null) {
-        return ApiResponse<Order>(
-          success: false,
-          error: 'غير مصرح للوصول',
-        );
+        return ApiResponse<Order>(success: false, error: 'غير مصرح للوصول');
       }
 
       final requestData = {
         'vendorId': vendorId == '-1' ? -1 : int.parse(vendorId),
         'description': description,
         'additionalNotes': additionalNotes,
+        'price': price,
         'userAddress': userAddress,
         'phoneNumber': phoneNumber,
         'userLatitude': userLatitude,
@@ -116,7 +155,9 @@ class UserOrderService {
 
       // Add attachments if present
       if (attachments != null && attachments.isNotEmpty) {
-        requestData['attachments'] = attachments.map((a) => a.toJson()).toList();
+        requestData['attachments'] = attachments
+            .map((a) => a.toJson())
+            .toList();
       }
 
       final response = await _apiService.post<Map<String, dynamic>>(
@@ -129,7 +170,8 @@ class UserOrderService {
       );
 
       if (response.success && response.data != null) {
-        final dataContainer = response.data is Map<String, dynamic> &&
+        final dataContainer =
+            response.data is Map<String, dynamic> &&
                 response.data!.containsKey('data')
             ? response.data!['data'] as Map<String, dynamic>?
             : response.data!;
@@ -156,7 +198,7 @@ class UserOrderService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserOrderService.createOrder error: $e');
+        ('UserOrderService.createOrder error: $e');
       }
       return ApiResponse<Order>(
         success: false,
@@ -169,10 +211,7 @@ class UserOrderService {
     try {
       final token = await _authService.getAccessToken();
       if (token == null) {
-        return ApiResponse<Order>(
-          success: false,
-          error: 'غير مصرح للوصول',
-        );
+        return ApiResponse<Order>(success: false, error: 'غير مصرح للوصول');
       }
 
       final response = await _apiService.put<Map<String, dynamic>>(
@@ -184,7 +223,8 @@ class UserOrderService {
       );
 
       if (response.success && response.data != null) {
-        final dataContainer = response.data is Map<String, dynamic> &&
+        final dataContainer =
+            response.data is Map<String, dynamic> &&
                 response.data!.containsKey('data')
             ? response.data!['data'] as Map<String, dynamic>?
             : response.data!;
@@ -211,7 +251,7 @@ class UserOrderService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserOrderService.approveOrder error: $e');
+        ('UserOrderService.approveOrder error: $e');
       }
       return ApiResponse<Order>(
         success: false,
@@ -224,10 +264,7 @@ class UserOrderService {
     try {
       final token = await _authService.getAccessToken();
       if (token == null) {
-        return ApiResponse<bool>(
-          success: false,
-          error: 'غير مصرح للوصول',
-        );
+        return ApiResponse<bool>(success: false, error: 'غير مصرح للوصول');
       }
 
       final response = await _apiService.delete<Map<String, dynamic>>(
@@ -239,21 +276,21 @@ class UserOrderService {
         return ApiResponse<bool>(
           success: true,
           data: true,
-          message: response.message ?? 'تم حذف الطلب بنجاح',
+          message: response.message ?? 'تم إلغاء الطلب بنجاح',
         );
       } else {
         return ApiResponse<bool>(
           success: false,
-          error: response.error ?? 'فشل في حذف الطلب',
+          error: response.error ?? 'فشل في إلغاء الطلب',
         );
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserOrderService.deleteOrder error: $e');
+        ('UserOrderService.deleteOrder error: $e');
       }
       return ApiResponse<bool>(
         success: false,
-        error: 'حدث خطأ أثناء حذف الطلب: ${e.toString()}',
+        error: 'حدث خطأ أثناء إلغاء الطلب: ${e.toString()}',
       );
     }
   }
@@ -262,17 +299,12 @@ class UserOrderService {
     try {
       final token = await _authService.getAccessToken();
       if (token == null) {
-        return ApiResponse<bool>(
-          success: false,
-          error: 'غير مصرح للوصول',
-        );
+        return ApiResponse<bool>(success: false, error: 'غير مصرح للوصول');
       }
 
       final response = await _apiService.put<Map<String, dynamic>>(
         '${AppConstants.deleteOrderEndpoint}/$orderId/rate',
-        data: {
-          'rating': rating,
-        },
+        data: {'rating': rating},
         options: Options(
           headers: {'Authorization': 'Bearer $token'},
           contentType: Headers.jsonContentType,
@@ -294,7 +326,7 @@ class UserOrderService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserOrderService.rateOrder error: $e');
+        ('UserOrderService.rateOrder error: $e');
       }
       return ApiResponse<bool>(
         success: false,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
@@ -10,6 +9,8 @@ import '../../services/location_service.dart';
 import '../../utils/time_utils.dart';
 import '../../widgets/attachments/attachment_display_widget.dart';
 import '../../widgets/common/smart_image.dart';
+import '../../../captain/core/widgets/clickable_phone_text.dart'
+    show ClickablePhoneText;
 
 class OrderDetailsScreen extends StatefulWidget {
   final Order order;
@@ -195,20 +196,20 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         for (String urlString in mapUrls) {
           try {
             final uri = Uri.parse(urlString);
-            print('Trying to launch: $urlString');
+            ('Trying to launch: $urlString');
 
             if (await canLaunchUrl(uri)) {
-              print('canLaunchUrl returned true for: $urlString');
+              ('canLaunchUrl returned true for: $urlString');
               await launchUrl(uri, mode: LaunchMode.externalApplication);
               launched = true;
-              print('Successfully launched: $urlString');
+              ('Successfully launched: $urlString');
               break;
             } else {
-              print('canLaunchUrl returned false for: $urlString');
+              ('canLaunchUrl returned false for: $urlString');
             }
           } catch (e) {
             lastError = e.toString();
-            print('Error with URL $urlString: $e');
+            ('Error with URL $urlString: $e');
           }
         }
 
@@ -236,7 +237,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
         _isLoading = false;
       });
 
-      print('General error in _openCaptainLocation: $e');
+      ('General error in _openCaptainLocation: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -429,7 +430,6 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: Text(
           'طلب #${_order.id}',
@@ -863,8 +863,8 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey[200]!),
               ),
-              child: Text(
-                _order.description,
+              child: ClickablePhoneText(
+                text: _order.description,
                 style: const TextStyle(
                   fontSize: 16,
                   height: 1.5,
@@ -896,9 +896,9 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.orange[200]!),
                 ),
-                child: _buildClickablePhoneText(
-                  _order.additionalNotes!,
-                  const TextStyle(
+                child: ClickablePhoneText(
+                  text: _order.additionalNotes!,
+                  style: const TextStyle(
                     fontSize: 14,
                     height: 1.5,
                   ),
@@ -1147,6 +1147,7 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
 
     switch (_order.status) {
       case OrderStatus.pending:
+      case OrderStatus.counterOfferAccepted:
         buttons = [
           FloatingActionButton.extended(
             heroTag: 'order_details_cancel_fab',
@@ -1201,74 +1202,4 @@ class _OrderDetailsScreenState extends State<OrderDetailsScreen> {
     }
   }
 
-  // Helper method to detect phone numbers and make them clickable
-  Widget _buildClickablePhoneText(String text, TextStyle style) {
-    // Ensure the style has a color, otherwise RichText defaults to white
-    final effectiveStyle = style.color == null 
-        ? style.copyWith(color: Colors.black87) 
-        : style;
-
-    // Egyptian phone number pattern: 01[0-2,5]{1}[0-9]{8} or with country code
-    final phoneRegex = RegExp(r'(\+?20)?0?1[0125]\d{8}');
-    final matches = phoneRegex.allMatches(text);
-
-    if (matches.isEmpty) {
-      // No phone numbers found, return regular text
-      return Text(text, style: effectiveStyle);
-    }
-
-    List<TextSpan> spans = [];
-    int lastMatchEnd = 0;
-
-    for (final match in matches) {
-      // Add text before the phone number
-      if (match.start > lastMatchEnd) {
-        spans.add(TextSpan(
-          text: text.substring(lastMatchEnd, match.start),
-          style: effectiveStyle,
-        ));
-      }
-
-      // Add clickable phone number
-      final phoneNumber = match.group(0)!;
-      spans.add(TextSpan(
-        text: phoneNumber,
-        style: effectiveStyle.copyWith(
-          color: Colors.blue[700],
-          decoration: TextDecoration.underline,
-          fontWeight: FontWeight.w600,
-        ),
-        recognizer: TapGestureRecognizer()
-          ..onTap = () async {
-            final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-            if (await canLaunchUrl(phoneUri)) {
-              await launchUrl(phoneUri);
-            } else {
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('لا يمكن إجراء المكالمة'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          },
-      ));
-
-      lastMatchEnd = match.end;
-    }
-
-    // Add remaining text after the last phone number
-    if (lastMatchEnd < text.length) {
-      spans.add(TextSpan(
-        text: text.substring(lastMatchEnd),
-        style: effectiveStyle,
-      ));
-    }
-
-    return RichText(
-      text: TextSpan(children: spans),
-    );
-  }
 }

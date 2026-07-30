@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:intl/intl.dart';
+import '../errors/api_exception.dart';
 
 class AppUtils {
   static String formatDate(DateTime date) {
@@ -108,6 +109,39 @@ class AppUtils {
 
   /// Converts error messages to user-friendly Arabic messages
   static String getLocalizedErrorMessage(dynamic error) {
+    // If this is an ApiException, it already carries the backend's actual
+    // error message (extracted from the response body's `error`/`message`
+    // field) - show that real message directly instead of re-deriving a
+    // generic one from keyword matching, which can discard or even mismatch
+    // the true cause (e.g. any unrelated 404 used to become "accepted by
+    // another captain").
+    if (error is ApiException) {
+      if (error.statusCode == 401) {
+        // The backend returns 401 for several distinct reasons, not just an
+        // expired session (e.g. "Captain is locked" when an admin locks the
+        // account or the captain exceeds the max-earnings threshold, and
+        // "Captain not found"). Surface the real reason instead of blanket
+        // "session expired", which is misleading and hides the actual cause.
+        final backendMessage = error.message.trim();
+        final isLocked = backendMessage.toLowerCase().contains('locked');
+        if (isLocked) {
+          return 'حسابك مُعلق حالياً. يرجى التواصل مع الإدارة';
+        }
+
+        final looksLikeSessionProblem =
+            backendMessage.isEmpty ||
+            backendMessage.toLowerCase().contains('token') ||
+            backendMessage.toLowerCase().contains('unauthorized') ||
+            backendMessage.toLowerCase().contains('expired');
+        if (looksLikeSessionProblem) {
+          return 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى';
+        }
+
+        return backendMessage;
+      }
+      return error.message;
+    }
+
     String errorString = error.toString().toLowerCase();
 
     // Network related errors
@@ -119,58 +153,8 @@ class AppUtils {
       return 'خطأ في الاتصال. تأكد من اتصالك بالإنترنت';
     }
 
-    // Authentication errors
-    if (errorString.contains('unauthorized') ||
-        errorString.contains('401') ||
-        errorString.contains('authentication') ||
-        errorString.contains('token')) {
-      return 'انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى';
-    }
-
-    // Permission errors
-    if (errorString.contains('forbidden') ||
-        errorString.contains('403') ||
-        errorString.contains('permission')) {
-      return 'ليس لديك صلاحية للقيام بهذا الإجراء';
-    }
-
-    // Server errors
-    if (errorString.contains('server') ||
-        errorString.contains('500') ||
-        errorString.contains('502') ||
-        errorString.contains('503') ||
-        errorString.contains('504')) {
-      return 'خطأ في الخادم. يرجى المحاولة لاحقاً';
-    }
-
-    // Order-specific errors
-    if (errorString.contains('not available for pickup')) {
-      return 'الطلب غير متاح حالياً. ربما تم قبوله من كابتن آخر';
-    }
-    if (errorString.contains('maximum order capacity')) {
-      return 'لقد وصلت للحد الأقصى من الطلبات الحالية';
-    }
-    if (errorString.contains('delivery price is required')) {
-      return 'سعر التوصيل مطلوب للطلبات الخاصة';
-    }
-    if (errorString.contains('already exists')) {
-      return 'البيانات موجودة مسبقاً (البريد أو اسم المستخدم أو رقم الهاتف)';
-    }
-
-    // Not found errors
-    if (errorString.contains('not found') || errorString.contains('404')) {
-      return 'المورد المطلوب غير موجود';
-    }
-
-    // Validation errors
-    if (errorString.contains('validation') ||
-        errorString.contains('invalid') ||
-        errorString.contains('bad request:') ||
-        errorString.contains('statuscode: 400')) {
-      return 'البيانات المدخلة غير صحيحة';
-    }
-
-    // Generic fallback
+    // Generic fallback for non-ApiException errors (e.g. socket/format
+    // exceptions) where there's no clean backend message to show.
     return 'حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى';
   }
 }

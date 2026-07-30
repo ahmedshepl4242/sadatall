@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:sadat_delivery_merged/vendor/constants/app_constants.dart';
 import 'package:sadat_delivery_merged/vendor/core/config/api_config.dart';
@@ -82,6 +83,7 @@ class ItemService {
     required String description,
     required double price,
     bool? isAvailable,
+    List<ItemSizeOption>? sizes,
   }) async {
     try {
       final token = await _authService.getAccessToken();
@@ -112,6 +114,12 @@ class ItemService {
       // Add optional fields
       if (isAvailable != null) {
         formData.fields.add(MapEntry('isAvailable', isAvailable.toString()));
+      }
+      if (sizes != null) {
+        formData.fields.add(MapEntry(
+          'sizes',
+          jsonEncode(sizes.map((s) => s.toJson()).toList()),
+        ));
       }
 
       final response = await _apiService.post<Map<String, dynamic>>(
@@ -152,6 +160,7 @@ class ItemService {
     String? description,
     double? price,
     bool? isAvailable,
+    List<ItemSizeOption>? sizes,
   }) async {
     try {
       final token = await _authService.getAccessToken();
@@ -188,6 +197,12 @@ class ItemService {
         if (isAvailable != null) {
           formData.fields.add(MapEntry('isAvailable', isAvailable.toString()));
         }
+        if (sizes != null) {
+          formData.fields.add(MapEntry(
+            'sizes',
+            jsonEncode(sizes.map((s) => s.toJson()).toList()),
+          ));
+        }
 
         final response = await _apiService.put<Map<String, dynamic>>(
           '$_itemsEndpoint/$id',
@@ -218,6 +233,9 @@ class ItemService {
         if (description != null) updateData['description'] = description;
         if (price != null) updateData['price'] = price;
         if (isAvailable != null) updateData['isAvailable'] = isAvailable;
+        if (sizes != null) {
+          updateData['sizes'] = sizes.map((s) => s.toJson()).toList();
+        }
 
         final response = await _apiService.put<Map<String, dynamic>>(
           '$_itemsEndpoint/$id',

@@ -68,7 +68,7 @@ class UserVendorService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserVendorService.getVendors error: $e');
+        ('UserVendorService.getVendors error: $e');
       }
       return ApiResponse<List<Vendor>>(
         success: false,
@@ -130,7 +130,7 @@ class UserVendorService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserVendorService.searchVendors error: $e');
+        ('UserVendorService.searchVendors error: $e');
       }
       return ApiResponse<List<Vendor>>(
         success: false,
@@ -185,7 +185,7 @@ class UserVendorService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserVendorService.getVendorMenus error: $e');
+        ('UserVendorService.getVendorMenus error: $e');
       }
       return ApiResponse<List<MenuItem>>(
         success: false,
@@ -240,7 +240,7 @@ class UserVendorService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserVendorService.getVendorItems error: $e');
+        ('UserVendorService.getVendorItems error: $e');
       }
       return ApiResponse<List<ProductItem>>(
         success: false,
@@ -251,14 +251,14 @@ class UserVendorService {
 
   Future<ApiResponse<List<models.Category>>> getCategories() async {
     try {
-      print(
+      (
           '🔵 [Categories API] Calling endpoint: ${AppConstants.categoriesEndpoint}');
       final response = await _apiService.get<Map<String, dynamic>>(
         AppConstants.categoriesEndpoint,
       );
 
-      print('🔵 [Categories API] Response success: ${response.success}');
-      print('🔵 [Categories API] Response data: ${response}');
+      ('🔵 [Categories API] Response success: ${response.success}');
+      ('🔵 [Categories API] Response data: ${response}');
 
       if (response.success && response.data != null) {
         final dataContainer = response.data is Map<String, dynamic> &&
@@ -266,25 +266,25 @@ class UserVendorService {
             ? response.data!['data'] as Map<String, dynamic>?
             : response.data!;
 
-        print('🔵 [Categories API] Data container: $dataContainer');
-        print(
+        ('🔵 [Categories API] Data container: $dataContainer');
+        (
             '🔵 [Categories API] Has categories key: ${dataContainer?.containsKey('categories')}');
 
         if (dataContainer != null && dataContainer.containsKey('categories')) {
           final categoriesData = dataContainer['categories'] as List;
-          print(
+          (
               '🔵 [Categories API] Categories data count: ${categoriesData.length}');
-          print('🔵 [Categories API] Categories raw data: $categoriesData');
+          ('🔵 [Categories API] Categories raw data: $categoriesData');
 
           final categories = categoriesData
               .map((category) =>
                   models.Category.fromJson(category as Map<String, dynamic>))
               .toList();
 
-          print(
+          (
               '🔵 [Categories API] Parsed categories count: ${categories.length}');
           for (var category in categories) {
-            print(
+            (
                 '🔵 [Categories API] Category: id=${category.id}, name=${category.name}');
           }
 
@@ -294,7 +294,7 @@ class UserVendorService {
             message: response.message ?? 'تم استرداد الفئات بنجاح',
           );
         } else {
-          print(
+          (
               '🔴 [Categories API] Categories key not found in data container');
           return ApiResponse<List<models.Category>>(
             success: false,
@@ -302,16 +302,16 @@ class UserVendorService {
           );
         }
       } else {
-        print('🔴 [Categories API] Response failed or data is null');
+        ('🔴 [Categories API] Response failed or data is null');
         return ApiResponse<List<models.Category>>(
           success: false,
           error: response.error ?? 'فشل في استرداد الفئات',
         );
       }
     } catch (e) {
-      print('🔴 [Categories API] Exception: $e');
+      ('🔴 [Categories API] Exception: $e');
       if (kDebugMode) {
-        print('UserVendorService.getCategories error: $e');
+        ('UserVendorService.getCategories error: $e');
       }
       return ApiResponse<List<models.Category>>(
         success: false,
@@ -365,7 +365,7 @@ class UserVendorService {
       }
     } catch (e) {
       if (kDebugMode) {
-        print('UserVendorService.getVendorPricing error: $e');
+        ('UserVendorService.getVendorPricing error: $e');
       }
       return ApiResponse<double>(
         success: false,

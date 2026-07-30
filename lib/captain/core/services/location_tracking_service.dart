@@ -75,7 +75,7 @@ class LocationTrackingService {
     try {
       // Initialize location
       if (!await _initializeLocation()) {
-        print("Location initialization failed");
+        ("Location initialization failed");
         return false;
       }
 
@@ -89,10 +89,10 @@ class LocationTrackingService {
       );
 
       _isTracking = true;
-      print("Location tracking started");
+      ("Location tracking started");
       return true;
     } catch (e) {
-      print("Error starting location tracking: $e");
+      ("Error starting location tracking: $e");
       return false;
     }
   }
@@ -108,7 +108,7 @@ class LocationTrackingService {
     // Disable background mode
     await _location.enableBackgroundMode(enable: false);
 
-    print("Location tracking stopped");
+    ("Location tracking stopped");
   }
 
   /// Handle location updates
@@ -135,7 +135,7 @@ class LocationTrackingService {
     _lastKnownPosition = locationData;
     _lastUpdateTime = now;
 
-    print(
+    (
       "Location update: ${locationData.latitude}, ${locationData.longitude}",
     );
     await _updateLocationOnServer(
@@ -146,7 +146,7 @@ class LocationTrackingService {
 
   /// Handle location errors
   void _onLocationError(dynamic error) {
-    print("Location tracking error: $error");
+    ("Location tracking error: $error");
   }
 
   /// Calculate distance between two coordinates
@@ -182,11 +182,11 @@ class LocationTrackingService {
         ApiConfig.captainsLocation,
         body: {"latitude": latitude, "longitude": longitude},
       );
-      print("Location sent to server: $latitude, $longitude");
+      ("Location sent to server: $latitude, $longitude");
     } catch (e) {
       // Only log the error, don't throw it or trigger auth failures
       // Location updates should be silent background operations
-      print("Error updating location on server: $e");
+      ("Error updating location on server: $e");
     }
   }
 
@@ -198,7 +198,7 @@ class LocationTrackingService {
       }
       return await _location.getLocation();
     } catch (e) {
-      print("Error getting current location: $e");
+      ("Error getting current location: $e");
       return null;
     }
   }

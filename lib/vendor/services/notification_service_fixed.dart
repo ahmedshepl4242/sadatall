@@ -33,11 +33,11 @@ class NotificationService {
       _isInitialized = true;
 
       if (kDebugMode) {
-        print('NotificationService initialized successfully');
+        ('NotificationService initialized successfully');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('NotificationService initialization error: $e');
+        ('NotificationService initialization error: $e');
       }
     }
   }
@@ -54,7 +54,7 @@ class NotificationService {
     );
 
     if (kDebugMode) {
-      print('Notification permission status: ${settings.authorizationStatus}');
+      ('Notification permission status: ${settings.authorizationStatus}');
     }
   }
 
@@ -87,7 +87,7 @@ class NotificationService {
       _fcmToken = await _messaging.getToken();
 
       if (kDebugMode) {
-        print('FCM Token: $_fcmToken');
+        ('FCM Token: $_fcmToken');
       }
 
       // Send token to backend
@@ -99,23 +99,23 @@ class NotificationService {
       _messaging.onTokenRefresh.listen((newToken) async {
         _fcmToken = newToken;
         if (kDebugMode) {
-          print('FCM Token refreshed: $newToken');
+          ('FCM Token refreshed: $newToken');
         }
         await _orderService.updateFCMToken(newToken);
       });
     } catch (e) {
       if (kDebugMode) {
-        print('Error getting FCM token: $e');
+        ('Error getting FCM token: $e');
       }
     }
   }
 
   void _handleForegroundMessage(RemoteMessage message) {
     if (kDebugMode) {
-      print('Received foreground message:');
-      print('Title: ${message.notification?.title}');
-      print('Body: ${message.notification?.body}');
-      print('Data: ${message.data}');
+      ('Received foreground message:');
+      ('Title: ${message.notification?.title}');
+      ('Body: ${message.notification?.body}');
+      ('Data: ${message.data}');
     }
 
     // Show SnackBar for foreground messages using the global navigator key
@@ -149,10 +149,10 @@ class NotificationService {
 
   void _handleNotificationTap(RemoteMessage message) {
     if (kDebugMode) {
-      print('Notification tapped:');
-      print('Title: ${message.notification?.title}');
-      print('Body: ${message.notification?.body}');
-      print('Data: ${message.data}');
+      ('Notification tapped:');
+      ('Title: ${message.notification?.title}');
+      ('Body: ${message.notification?.body}');
+      ('Data: ${message.data}');
     }
 
     _handleNotificationNavigation(message.data);
@@ -170,19 +170,19 @@ class NotificationService {
           if (navigatorKey.currentContext != null) {
             // Implement your navigation logic here
             if (kDebugMode) {
-              print('Navigate to order: $orderId');
+              ('Navigate to order: $orderId');
             }
           }
         }
         break;
       case 'customer_message':
         if (kDebugMode) {
-          print('Navigate to customer message');
+          ('Navigate to customer message');
         }
         break;
       default:
         if (kDebugMode) {
-          print('Unknown notification type: $type');
+          ('Unknown notification type: $type');
         }
     }
   }
@@ -211,7 +211,7 @@ class NotificationService {
     // This is a placeholder method to maintain API compatibility
     // If you need more control, you would need to implement platform-specific code
     if (kDebugMode) {
-      print('Clearing notifications - Note: FCM handles this automatically');
+      ('Clearing notifications - Note: FCM handles this automatically');
     }
   }
 
@@ -223,11 +223,11 @@ class NotificationService {
     try {
       await _messaging.subscribeToTopic(topic);
       if (kDebugMode) {
-        print('Subscribed to topic: $topic');
+        ('Subscribed to topic: $topic');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error subscribing to topic $topic: $e');
+        ('Error subscribing to topic $topic: $e');
       }
     }
   }
@@ -236,11 +236,11 @@ class NotificationService {
     try {
       await _messaging.unsubscribeFromTopic(topic);
       if (kDebugMode) {
-        print('Unsubscribed from topic: $topic');
+        ('Unsubscribed from topic: $topic');
       }
     } catch (e) {
       if (kDebugMode) {
-        print('Error unsubscribing from topic $topic: $e');
+        ('Error unsubscribing from topic $topic: $e');
       }
     }
   }
@@ -251,9 +251,9 @@ class NotificationService {
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Note: you may want to initialize Firebase here if using other Firebase services
   if (kDebugMode) {
-    print('Handling background message:');
-    print('Title: ${message.notification?.title}');
-    print('Body: ${message.notification?.body}');
-    print('Data: ${message.data}');
+    ('Handling background message:');
+    ('Title: ${message.notification?.title}');
+    ('Body: ${message.notification?.body}');
+    ('Data: ${message.data}');
   }
 }
