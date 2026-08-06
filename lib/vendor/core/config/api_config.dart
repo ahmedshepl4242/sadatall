@@ -1,0 +1,159 @@
+import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart' show kDebugMode, debug, debugPrint;
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ApiConfig {
+  // Default fallback URL in case Firestore request fails
+  static const String _defaultBaseUrl =
+      'https://delivery-sadatcity.duckdns.org/api';
+
+  // Firebase configuration for fetching base URL
+  static const Map<String, String> firebaseConfig = {
+    'apiKey': "AIzaSyAmMuMfOZzFJYZ2FpNIGN3f3C2Pug5cBHc",
+    'authDomain': "buss-3c283.firebaseapp.com",
+    'projectId': "buss-3c283",
+    'storageBucket': "buss-3c283.firebasestorage.app",
+    'messagingSenderId': "793738063888",
+    'appId': "1:793738063888:web:a371b6c0aff3ca6e135a95",
+    'measurementId': "G-G5XZ20LLGH"
+  };
+
+  // Collection and document details
+  static const String _collectionName = 'delivery_app_config';
+  static const String _documentName = 'base_url';
+  static const String _fieldName = 'value';
+  static const String _versionFieldName = 'version_vendor';
+
+  static String? _cachedBaseUrl;
+
+  /// Returns true if [required] version is strictly greater than [current].
+  static bool _isUpdateRequired(String current, String required) {
+    final currentParts = current.trim().split('.').map(int.tryParse).toList();
+    final requiredParts = required.trim().split('.').map(int.tryParse).toList();
+    while (currentParts.length < 3) currentParts.add(0);
+    while (requiredParts.length < 3) requiredParts.add(0);
+    for (int i = 0; i < 3; i++) {
+      final c = currentParts[i] ?? 0;
+      final r = requiredParts[i] ?? 0;
+      if (r > c) return true;
+      if (r < c) return false;
+    }
+    return false;
+  }
+
+  /// Returns required version string if force update needed, null otherwise.
+  static Future<String?> checkForceUpdate() async {
+    try {
+      await _initializeFirebaseApp();
+      final docSnapshot = await getFirestoreInstance()
+          .collection(_collectionName)
+          .doc(_documentName)
+          .get()
+          .timeout(const Duration(seconds: 8), onTimeout: () => throw Exception('timeout'));
+      if (!docSnapshot.exists) return null;
+      final requiredVersion =
+          docSnapshot.data()?[_versionFieldName] as String?;
+      if (requiredVersion == null || requiredVersion.isEmpty) return null;
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+      if (kDebugMode) {
+        (
+            'Force update check — current: $currentVersion, required: $requiredVersion');
+      }
+      if (_isUpdateRequired(currentVersion, requiredVersion)) {
+        return requiredVersion;
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        ('Force update check failed (non-blocking): $e');
+      }
+    }
+    return null;
+  }
+
+  // Fetch base URL from Firestore
+  static Future<String?> fetchBaseUrl() async {
+    const testUrl = String.fromEnvironment('TEST_BASE_URL');
+    if (testUrl.isNotEmpty){
+      debugPrint('Using test base URL from environment: $testUrl');
+    return testUrl;
+    } 
+    try {
+      // Initialize Firebase with the specific config (without interfering with main Firebase app)
+      await _initializeFirebaseApp();
+
+      ('Fetching IP/URL from Firebase Firestore...');
+
+      // Fetch from Firestore
+      final docSnapshot = await getFirestoreInstance()
+          .collection(_collectionName)
+          .doc(_documentName)
+          .get()
+          .timeout(const Duration(seconds: 8), onTimeout: () => throw Exception('timeout'));
+
+      if (docSnapshot.exists) {
+        final docData = docSnapshot.data();
+        if (docData != null) {
+          final baseUrl = docData[_fieldName] as String?;
+
+          if (baseUrl != null && baseUrl.isNotEmpty) {
+            ('Successfully fetched IP/URL from Firebase: $baseUrl');
+            // Cache and save to local storage
+            _cachedBaseUrl = baseUrl;
+            await _saveBaseUrlToLocal(baseUrl);
+            return baseUrl;
+          }
+        }
+      }
+
+      // If Firestore fetch fails, return cached value or default
+      (
+          'Firebase fetch failed or returned empty result. Using cached/default URL.');
+      return await _getCachedBaseUrl();
+    } catch (e) {
+      ('Error fetching IP/URL from Firebase: $e');
+      return await _getCachedBaseUrl();
+    }
+  }
+
+  // Firebase is initialized once in main() — no secondary app needed.
+  static Future<void> _initializeFirebaseApp() async {}
+
+  // Always use the default Firestore instance.
+  static FirebaseFirestore getFirestoreInstance() {
+    return FirebaseFirestore.instance;
+  }
+
+  // Save base URL to local storage
+  static Future<void> _saveBaseUrlToLocal(String baseUrl) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('base_url', baseUrl);
+  }
+
+  // Get cached base URL from local storage
+  static Future<String?> _getCachedBaseUrl() async {
+    if (_cachedBaseUrl != null) {
+      return _cachedBaseUrl;
+    }
+
+    final prefs = await SharedPreferences.getInstance();
+    final cached = prefs.getString('base_url');
+
+    if (cached != null && cached.isNotEmpty) {
+      _cachedBaseUrl = cached;
+    } else {
+      _cachedBaseUrl = _defaultBaseUrl;
+    }
+
+    return _cachedBaseUrl;
+  }
+
+  // Clear cached base URL
+  static Future<void> clearCachedBaseUrl() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('base_url');
+    _cachedBaseUrl = null;
+  }
+}

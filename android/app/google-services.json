@@ -1,0 +1,276 @@
+{
+  "project_info": {
+    "project_number": "793738063888",
+    "project_id": "buss-3c283",
+    "storage_bucket": "buss-3c283.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:b3ecaa03d7dd5b40135a95",
+        "android_client_info": {
+          "package_name": "co.powersync.demotodolist"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:17a139aa64582b9d135a95",
+        "android_client_info": {
+          "package_name": "com.assistant.admin.edu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:dc7a7ef486234887135a95",
+        "android_client_info": {
+          "package_name": "com.center.edu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:13535e1952323a73135a95",
+        "android_client_info": {
+          "package_name": "com.example.centers"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:c5b0f217d6df3abd135a95",
+        "android_client_info": {
+          "package_name": "com.example.sadat_user_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:bbc9adbe8e8e36f7135a95",
+        "android_client_info": {
+          "package_name": "com.example.sadat_vendor_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:d597f7b2a6bebc61135a95",
+        "android_client_info": {
+          "package_name": "com.example.truck_fleet_client"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:460241880709d10e135a95",
+        "android_client_info": {
+          "package_name": "com.example.truck_fleet_driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:4ab1bac630a2dbe8135a95",
+        "android_client_info": {
+          "package_name": "com.softAdmin.studentDetails"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:54e9bf9fcb3e72a7135a95",
+        "android_client_info": {
+          "package_name": "com.softadmin.app.edu"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:265ecfe53e8432d4135a95",
+        "android_client_info": {
+          "package_name": "com.softadmin.edu.students"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:13d54bc4c2b8dfb2135a95",
+        "android_client_info": {
+          "package_name": "com.solvy.softadmin.education"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:e9116bac92110424135a95",
+        "android_client_info": {
+          "package_name": "sadat.delivery.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:793738063888:android:8a5aa3166ca2c6b2135a95",
+        "android_client_info": {
+          "package_name": "sadat.delivery.solvy.com"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAFUWaTseTx6wpGeKEwuoqMROWWrlnOKjE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

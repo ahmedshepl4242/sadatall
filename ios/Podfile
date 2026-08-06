@@ -1,0 +1,106 @@
+# Uncomment this line to define a global platform for your project
+platform :ios, '14.0'
+
+# CocoaPods analytics sends network stats synchronously affecting flutter build latency.
+ENV['COCOAPODS_DISABLE_STATS'] = 'true'
+
+project 'Runner', {
+  'Debug' => :debug,
+  'Profile' => :release,
+  'Release' => :release,
+}
+
+def flutter_root
+  generated_xcode_build_settings_path = File.expand_path(File.join('..', 'Flutter', 'Generated.xcconfig'), __FILE__)
+  unless File.exist?(generated_xcode_build_settings_path)
+    raise "#{generated_xcode_build_settings_path} must exist. If you're running pod install manually, make sure flutter pub get is executed first"
+  end
+
+  File.foreach(generated_xcode_build_settings_path) do |line|
+    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    return matches[1].strip if matches
+  end
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
+end
+
+require File.expand_path(File.join('packages', 'flutter_tools', 'bin', 'podhelper'), flutter_root)
+
+flutter_ios_podfile_setup
+
+target 'Runner' do
+  use_frameworks!
+  use_modular_headers!
+
+  flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+  target 'RunnerTests' do
+    inherit! :search_paths
+  end
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+
+      # Suppress Xcode 26/Clang 16+ C++ template and builtin deprecation errors/warnings
+      cflags = config.build_settings['OTHER_CFLAGS'] || ['$(inherited)']
+      cflags = [cflags] if cflags.is_a?(String)
+      cxxflags = config.build_settings['OTHER_CPLUSPLUSFLAGS'] || ['$(inherited)']
+      cxxflags = [cxxflags] if cxxflags.is_a?(String)
+
+      flags_to_add = ['-Wno-missing-template-arg-list-after-template-kw', '-Wno-deprecated-builtins']
+      flags_to_add.each do |flag|
+        cflags << flag unless cflags.include?(flag)
+        cxxflags << flag unless cxxflags.include?(flag)
+      end
+
+      config.build_settings['OTHER_CFLAGS'] = cflags
+      config.build_settings['OTHER_CPLUSPLUSFLAGS'] = cxxflags
+
+      # Fix firebase_messaging: Xcode 26+ strict modular headers rejects
+      # #import <Firebase/Firebase.h> inside a framework module. Disabling
+      # DEFINES_MODULE prevents the framework wrapper from being generated,
+      # which sidesteps the -Wnon-modular-include-in-framework-module error.
+      if target.name == 'firebase_messaging'
+        config.build_settings['DEFINES_MODULE'] = 'NO'
+        puts "post_install: set DEFINES_MODULE=NO for firebase_messaging/#{config.name}"
+      end
+
+      # Fix BoringSSL-GRPC: its podspec sets -GCC_WARN_INHIBIT_ALL_WARNINGS in
+      # OTHER_CFLAGS, which Xcode 26+ Clang rejects for arm64-apple-ios targets
+      # (parsed as the MIPS-only -G flag). Fix both the .pbxproj build settings
+      # dictionary (higher precedence) AND the xcconfig files on disk.
+      next unless target.name == 'BoringSSL-GRPC'
+
+      # Fix 1: OTHER_CFLAGS in .pbxproj (pre-response-file flags)
+      config.build_settings['OTHER_CFLAGS'] = [
+        '-DOPENSSL_NO_ASM',
+        '-w',
+        '-DBORINGSSL_PREFIX=GRPC',
+      ]
+      puts "post_install: fixed OTHER_CFLAGS for BoringSSL-GRPC/#{config.name}"
+    end
+
+    # Fix 2: PBXBuildFile COMPILER_FLAGS (post-response-file per-file flags)
+    if target.name == 'BoringSSL-GRPC' && target.respond_to?(:source_build_phase) && target.source_build_phase
+      target.source_build_phase.files.each do |build_file|
+        flags = build_file.settings&.fetch('COMPILER_FLAGS', nil)
+        next unless flags&.include?('GCC_WARN_INHIBIT_ALL_WARNINGS')
+        build_file.settings['COMPILER_FLAGS'] = flags.gsub('-GCC_WARN_INHIBIT_ALL_WARNINGS', '').squeeze(' ').strip
+        puts "post_install: fixed COMPILER_FLAGS for BoringSSL-GRPC/#{build_file.file_ref&.path&.split('/')&.last}"
+      end
+    end
+  end
+
+  # 2. Also fix xcconfig files on disk (belt-and-suspenders)
+  boringssl_dir = File.join(installer.sandbox.root, 'Target Support Files', 'BoringSSL-GRPC')
+  Dir.glob(File.join(boringssl_dir, '*.xcconfig')).each do |xcconfig_path|
+    content = File.read(xcconfig_path)
+    if content.include?('-GCC_WARN_INHIBIT_ALL_WARNINGS')
+      File.write(xcconfig_path, content.gsub('-GCC_WARN_INHIBIT_ALL_WARNINGS', ''))
+      puts "post_install [xcconfig]: fixed #{File.basename(xcconfig_path)}"
+    end
+  end
+end
+
