@@ -74,9 +74,19 @@ workflows:
                   -configuration Release -destination 'generic/platform=iOS' \
                   -showBuildSettings 2>/dev/null | grep -m1 " SDK_NAME" || true)
           echo "resolved:${SDK}"
+          # Require a positive iphoneos match: an empty SDK means
+          # -showBuildSettings itself failed, which must not pass silently.
           case "$SDK" in
             *iphonesimulator*)
               echo ">>> FAIL: resolving the simulator SDK for a device build"
+              exit 1 ;;
+            *iphoneos*)
+              echo "OK: device SDK" ;;
+            *)
+              echo ">>> FAIL: could not read SDK_NAME (showBuildSettings failed)"
+              xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
+                -configuration Release -destination 'generic/platform=iOS' \
+                -showBuildSettings 2>&1 | tail -30
               exit 1 ;;
           esac
 
