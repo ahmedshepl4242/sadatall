@@ -19,7 +19,13 @@ workflows:
 
       - name: Flutter config-only (generates xcconfig & plugin files, skips pod install)
         script: |
-          flutter build ios --config-only --no-codesign 2>/dev/null || true
+          # Drop any stale build/ dir: a previous simulator-configured build
+          # leaves Release-iphonesimulator artifacts that make the device build
+          # resolve against the simulator SDK.
+          rm -rf build ios/.symlinks ios/Flutter/ephemeral
+          # No `|| true` here: if config generation fails the xcconfigs are left
+          # half-written and the real error only surfaces much later.
+          flutter build ios --config-only --release --no-codesign
 
       - name: Clean and reinstall pods
         script: |
@@ -62,24 +68,37 @@ workflows:
           echo "=== schemes xcodebuild can see ==="
           xcodebuild -workspace ios/Runner.xcworkspace -list
 
+      - name: Confirm the build resolves the device SDK, not the simulator
+        script: |
+          SDK=$(xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
+                  -configuration Release -destination 'generic/platform=iOS' \
+                  -showBuildSettings 2>/dev/null | grep -m1 " SDK_NAME" || true)
+          echo "resolved:${SDK}"
+          case "$SDK" in
+            *iphonesimulator*)
+              echo ">>> FAIL: resolving the simulator SDK for a device build"
+              exit 1 ;;
+          esac
+
       - name: Build iOS Release
         script: |
-          # `flutter build` hides the underlying xcodebuild diagnostic, so on
-          # failure fall back to xcodebuild directly to surface the real error.
-          flutter build ios --release --no-codesign --verbose 2>&1 | tee /tmp/xbuild.log
-          STATUS=${PIPESTATUS[0]}
+          # No --verbose: it emits ~10k lines of build settings per target and
+          # buries the actual diagnostic. The grep below surfaces it instead.
+          set -o pipefail
+          flutter build ios --release --no-codesign 2>&1 | tee /tmp/xbuild.log
+          STATUS=$?
           if [ $STATUS -ne 0 ]; then
-            echo "=== error / warning / fatal lines ==="
-            grep -nE "error:|fatal|ld: |clang: |The following build commands failed|Undefined symbol" /tmp/xbuild.log | head -40
+            echo "=== error lines ==="
+            grep -nE "error:|fatal error|ld: |The following build commands failed|Undefined symbol" /tmp/xbuild.log | head -40
             echo ""
-            echo "=== re-running via xcodebuild for the real diagnostic ==="
+            echo "=== real diagnostic via xcodebuild ==="
             xcodebuild \
               -workspace ios/Runner.xcworkspace \
               -scheme Runner \
               -configuration Release \
               -destination 'generic/platform=iOS' \
               CODE_SIGNING_ALLOWED=NO \
-              build 2>&1 | tail -80
+              build 2>&1 | grep -E "error:|fatal error|The following build commands failed|Undefined symbol" | head -40
           fi
           exit $STATUS
 
