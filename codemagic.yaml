@@ -9,7 +9,13 @@ workflows:
 
     scripts:
       - name: Get Flutter dependencies
-        script: flutter pub get
+        script: |
+          # This project uses CocoaPods only (no Package.swift, no
+          # XCRemoteSwiftPackageReference). Flutter's experimental SPM
+          # integration mis-parses Runner.xcscheme and aborts the build, so
+          # turn it off before any `flutter build` runs.
+          flutter config --no-enable-swift-package-manager
+          flutter pub get
 
       - name: Flutter config-only (generates xcconfig & plugin files, skips pod install)
         script: |
