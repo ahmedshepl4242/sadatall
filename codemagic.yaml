@@ -44,17 +44,21 @@ workflows:
           fi
           echo "=== Done ==="
 
-      - name: Build iOS Release (xcodebuild direct, fresh DerivedData)
+      - name: Verify xcconfig includes Pods (diagnoses "scheme not configured")
         script: |
-          xcodebuild \
-            -workspace ios/Runner.xcworkspace \
-            -scheme Runner \
-            -configuration Release \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath /tmp/derived_data \
-            CODE_SIGNING_ALLOWED=NO \
-            COMPILER_INDEX_STORE_ENABLE=NO \
-            2>&1 | tee /tmp/xbuild.log
+          echo "=== ios/Flutter/Release.xcconfig ==="
+          cat ios/Flutter/Release.xcconfig
+          if ! grep -q "Pods-Runner.release.xcconfig" ios/Flutter/Release.xcconfig; then
+            echo ">>> Pods include MISSING - restoring it"
+            printf '#include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig"\n#include "Generated.xcconfig"\n' > ios/Flutter/Release.xcconfig
+            cat ios/Flutter/Release.xcconfig
+          fi
+          echo "=== schemes xcodebuild can see ==="
+          xcodebuild -workspace ios/Runner.xcworkspace -list
+
+      - name: Build iOS Release
+        script: |
+          flutter build ios --release --no-codesign 2>&1 | tee /tmp/xbuild.log
           STATUS=${PIPESTATUS[0]}
           if [ $STATUS -ne 0 ]; then
             echo "=== error lines ==="
