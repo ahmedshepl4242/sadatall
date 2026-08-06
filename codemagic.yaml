@@ -2,6 +2,7 @@ workflows:
   ios-release-build:
     name: iOS Release Build
     max_build_duration: 60
+    working_directory: sadat_delivery_merged
     environment:
       flutter: stable
       xcode: latest
@@ -63,13 +64,14 @@ workflows:
           exit $STATUS
 
     artifacts:
-      - build/ios/iphoneos/Runner.app
+      - sadat_delivery_merged/build/ios/iphoneos/Runner.app
       - /tmp/xbuild.log
 
   # ---------------------------------------------------------------------------
   ios-release-workflow:
-    name: iOS Release Build
+    name: iOS Release Archive
     max_build_duration: 60
+    working_directory: sadat_delivery_merged
     environment:
       flutter: stable
       xcode: latest
