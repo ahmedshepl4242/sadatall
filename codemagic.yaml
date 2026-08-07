@@ -101,6 +101,30 @@ workflows:
           echo "=== schemes xcodebuild can see ==="
           xcodebuild -workspace ios/Runner.xcworkspace -list
 
+      # Prints, in one place, everything needed to explain "Supported platforms
+      # ... is empty". Never fails the build: it must always run to completion
+      # so the next step's failure arrives with its evidence already on screen.
+      - name: Diagnose empty SUPPORTED_PLATFORMS
+        script: |
+          echo "=== pwd ==="; pwd
+          echo "=== ls ios ==="; ls ios
+          echo "=== Pods-Runner.release.xcconfig ==="
+          cat "ios/Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig" || true
+          echo "=== schemes xcodebuild can see ==="
+          xcodebuild -workspace ios/Runner.xcworkspace -list || true
+          # The decisive test: -project bypasses the workspace and the Pods
+          # xcconfig chain entirely. If SUPPORTED_PLATFORMS is iphoneos here but
+          # empty via -workspace, a Pods xcconfig is clobbering it. If it is
+          # empty in both, the cause is in Runner.xcodeproj itself.
+          echo "=== project-only (bypasses workspace + Pods) ==="
+          xcodebuild -project ios/Runner.xcodeproj -target Runner \
+            -configuration Release -showBuildSettings 2>&1 \
+            | grep -E "SUPPORTED_PLATFORMS|SDKROOT|PLATFORM_NAME" || true
+          echo "=== workspace resolution, full error ==="
+          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
+            -configuration Release -showBuildSettings 2>&1 | tail -40 || true
+          echo "=== end diagnostics ==="
+
       - name: Confirm the build resolves the device SDK, not the simulator
         script: |
           # 2>&1, not 2>/dev/null: discarding stderr hides the actual xcodebuild
