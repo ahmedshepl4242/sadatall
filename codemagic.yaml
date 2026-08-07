@@ -101,52 +101,23 @@ workflows:
           echo "=== schemes xcodebuild can see ==="
           xcodebuild -workspace ios/Runner.xcworkspace -list
 
-      # Prints, in one place, everything needed to explain "Supported platforms
-      # ... is empty". Never fails the build: it must always run to completion
-      # so the next step's failure arrives with its evidence already on screen.
-      - name: Diagnose empty SUPPORTED_PLATFORMS
+      - name: Verify the scheme still points at a real target
         script: |
-          echo "=== pwd ==="; pwd
-          echo "=== ls ios ==="; ls ios
-          echo "=== Pods-Runner.release.xcconfig ==="
-          cat "ios/Pods/Target Support Files/Pods-Runner/Pods-Runner.release.xcconfig" || true
-          echo "=== schemes xcodebuild can see ==="
-          xcodebuild -workspace ios/Runner.xcworkspace -list || true
-          # The decisive test: -project bypasses the workspace and the Pods
-          # xcconfig chain entirely. If SUPPORTED_PLATFORMS is iphoneos here but
-          # empty via -workspace, a Pods xcconfig is clobbering it. If it is
-          # empty in both, the cause is in Runner.xcodeproj itself.
-          echo "=== project-only (bypasses workspace + Pods) ==="
-          xcodebuild -project ios/Runner.xcodeproj -target Runner \
-            -configuration Release -showBuildSettings 2>&1 \
-            | grep -E "SUPPORTED_PLATFORMS|SDKROOT|PLATFORM_NAME" || true
-          echo "=== workspace resolution, full error ==="
-          xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
-            -configuration Release -showBuildSettings 2>&1 | tail -40 || true
-
-          # Reduce all of the above to a single verdict line and exit non-zero,
-          # so the conclusion lands in the step that actually fails the build
-          # instead of being buried in a collapsed, passing step.
-          PROJ_SP=$(xcodebuild -project ios/Runner.xcodeproj -target Runner \
-                      -configuration Release -showBuildSettings 2>/dev/null \
-                      | grep -m1 "SUPPORTED_PLATFORMS" | cut -d= -f2- | xargs)
-          WS_SP=$(xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
-                    -configuration Release -showBuildSettings 2>/dev/null \
-                    | grep -m1 "SUPPORTED_PLATFORMS" | cut -d= -f2- | xargs)
-          echo "############ VERDICT ############"
-          echo "PROJECT SUPPORTED_PLATFORMS   = '${PROJ_SP}'"
-          echo "WORKSPACE SUPPORTED_PLATFORMS = '${WS_SP}'"
-          if [ -n "$PROJ_SP" ] && [ -z "$WS_SP" ]; then
-            echo "VERDICT: project is FINE; the Pods/workspace xcconfig chain clobbers it."
-          elif [ -z "$PROJ_SP" ]; then
-            echo "VERDICT: Runner.xcodeproj itself resolves no platform in CI."
-          else
-            echo "VERDICT: both resolve; failure is destination/scheme-specific."
+          # A find/replace once rewrote BlueprintIdentifier/BlueprintName to
+          # BlueIdentifier/BlueName in Runner.xcscheme. Xcode ignores unknown
+          # attributes silently, so the scheme still *listed* but referenced no
+          # target: "Supported platforms ... is empty" / "Scheme Runner is not
+          # currently configured for the build action". Catch that here, where
+          # the message names the cause, instead of 3 steps later.
+          SCHEME=ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme
+          if grep -qE '\bBlueIdentifier\b|\bBlueName\b' "$SCHEME"; then
+            echo ">>> FAIL: $SCHEME uses BlueIdentifier/BlueName."
+            echo ">>> They must be BlueprintIdentifier/BlueprintName."
+            exit 1
           fi
-          echo "#################################"
-          echo "=== end diagnostics ==="
-          # Intentional: surfaces the verdict in the failing-step output.
-          exit 1
+          grep -q "BlueprintIdentifier" "$SCHEME" \
+            || { echo ">>> FAIL: no BlueprintIdentifier in $SCHEME"; exit 1; }
+          echo "OK: scheme references a target by BlueprintIdentifier"
 
       - name: Confirm the build resolves the device SDK, not the simulator
         script: |
