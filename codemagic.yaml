@@ -123,7 +123,30 @@ workflows:
           echo "=== workspace resolution, full error ==="
           xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
             -configuration Release -showBuildSettings 2>&1 | tail -40 || true
+
+          # Reduce all of the above to a single verdict line and exit non-zero,
+          # so the conclusion lands in the step that actually fails the build
+          # instead of being buried in a collapsed, passing step.
+          PROJ_SP=$(xcodebuild -project ios/Runner.xcodeproj -target Runner \
+                      -configuration Release -showBuildSettings 2>/dev/null \
+                      | grep -m1 "SUPPORTED_PLATFORMS" | cut -d= -f2- | xargs)
+          WS_SP=$(xcodebuild -workspace ios/Runner.xcworkspace -scheme Runner \
+                    -configuration Release -showBuildSettings 2>/dev/null \
+                    | grep -m1 "SUPPORTED_PLATFORMS" | cut -d= -f2- | xargs)
+          echo "############ VERDICT ############"
+          echo "PROJECT SUPPORTED_PLATFORMS   = '${PROJ_SP}'"
+          echo "WORKSPACE SUPPORTED_PLATFORMS = '${WS_SP}'"
+          if [ -n "$PROJ_SP" ] && [ -z "$WS_SP" ]; then
+            echo "VERDICT: project is FINE; the Pods/workspace xcconfig chain clobbers it."
+          elif [ -z "$PROJ_SP" ]; then
+            echo "VERDICT: Runner.xcodeproj itself resolves no platform in CI."
+          else
+            echo "VERDICT: both resolve; failure is destination/scheme-specific."
+          fi
+          echo "#################################"
           echo "=== end diagnostics ==="
+          # Intentional: surfaces the verdict in the failing-step output.
+          exit 1
 
       - name: Confirm the build resolves the device SDK, not the simulator
         script: |
